@@ -1,0 +1,496 @@
+{
+  "name": "N8N RAG Chat Workflow (Corrected)",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "hostedChat",
+        "options": {
+          "loadPreviousSession": "fromMemory",
+          "responseMode": "responseNode"
+        }
+      },
+      "id": "chat-trigger",
+      "name": "Chat Trigger",
+      "type": "n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "{{ widgetId }}"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse incoming chat data and metadata (prompt specs)\nconst chatInput = $json.chatInput || '';\nconst sessionId = $json.sessionId || '';\nconst files = $json.files || [];\n\n// Parse metadata - handle both string and object formats\nlet metadata = $json.metadata || {};\nif (typeof metadata === 'string') {\n  try {\n    metadata = JSON.parse(metadata);\n  } catch (e) {\n    console.error('Failed to parse metadata:', e);\n    metadata = {};\n  }\n}\n\n// Extract customer information (as per prompt specs)\nconst customerId = metadata.customerId;\nconst widgetId = metadata.widgetId;\nconst companyName = metadata.companyName || '';\nconst userRole = metadata.userRole || 'visitor';\nconst subscription = metadata.subscription || 'free';\n\n// Default client metadata (as per prompt)\nconst clientCurrentDateTime = metadata.clientCurrentDateTime || new Date().toISOString();\nconst clientCurrentTimezone = metadata.clientCurrentTimezone || 'Europe/Istanbul';\nconst clientQueryParams = metadata.clientQueryParams || {};\nconst clientUserAgent = metadata.clientUserAgent || '';\n\n// Custom fields from prompt\nconst customFields = metadata.customFields || {};\n\n// Enhanced metadata with all prompt specifications\nconst enhancedMetadata = {\n  customerId,\n  widgetId,\n  companyName,\n  userRole,\n  subscription,\n  sessionId,\n  timestamp: new Date().toISOString(),\n  hasFiles: files.length > 0,\n  fileCount: files.length,\n  clientCurrentDateTime,\n  clientCurrentTimezone,\n  clientQueryParams,\n  clientUserAgent,\n  customFields,\n  pageUrl: metadata.pageUrl || '',\n  sessionStart: metadata.sessionStart || new Date().toISOString(),\n  locale: metadata.locale || 'tr'\n};\n\n// Clean and prepare user query\nconst cleanQuery = chatInput.trim();\n\n// Validate required data (as per prompt specs)\nif (!customerId) {\n  throw new Error('Customer ID is required');\n}\n\nif (!widgetId) {\n  throw new Error('Widget ID is required');\n}\n\nif (!cleanQuery && files.length === 0) {\n  throw new Error('Chat input or files are required');\n}\n\nreturn [{\n  json: {\n    userQuery: cleanQuery,\n    customerId,\n    widgetId,\n    sessionId,\n    files,\n    metadata: enhancedMetadata,\n    processingTimestamp: Date.now()\n  }\n}];"
+      },
+      "id": "parse-input",
+      "name": "Parse Chat Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-files",
+              "leftValue": "={{ $json.files.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-files",
+      "name": "Check for Files",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "text-embedding-ada-002"
+            },
+            {
+              "name": "input",
+              "value": "={{ $json.userQuery }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "generate-embedding",
+      "name": "Generate Query Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{ $env.SUPABASE_URL }}/rest/v1/rpc/search_documents",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "{{ $env.SUPABASE_ANON_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_ANON_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query_embedding",
+              "value": "={{ $('Generate Query Embedding').item(0).json.data[0].embedding }}"
+            },
+            {
+              "name": "filter_customer_id",
+              "value": "={{ $('Parse Chat Input').item(0).json.customerId }}"
+            },
+            {
+              "name": "filter_widget_id",
+              "value": "={{ $('Parse Chat Input').item(0).json.widgetId }}"
+            },
+            {
+              "name": "match_count",
+              "value": 5
+            },
+            {
+              "name": "similarity_threshold",
+              "value": 0.7
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "vector-search",
+      "name": "Vector Search Documents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build context from search results (Turkish language support)\nconst searchResults = $('Vector Search Documents').item(0).json || [];\nconst userQuery = $('Parse Chat Input').item(0).json.userQuery;\nconst metadata = $('Parse Chat Input').item(0).json.metadata;\n\n// Prepare context for AI\nlet context = '';\nlet sourceDocuments = [];\n\nif (searchResults.length > 0) {\n  context = searchResults.map((result, index) => {\n    sourceDocuments.push({\n      filename: result.document_filename,\n      similarity: result.similarity,\n      chunkId: result.chunk_id\n    });\n    \n    return `[Kaynak ${index + 1} - ${result.document_filename}]\\n${result.content}`;\n  }).join('\\n\\n---\\n\\n');\n} else {\n  context = 'Üzgünüm, sorgunuzla ilgili spesifik bilgi bulunamadı.';\n}\n\n// Prepare Turkish system prompt with company context\nconst systemPrompt = `Sen ${metadata.companyName || 'şirketimizin'} müşteri hizmetleri asistanısın. Kullanıcının sorularını mevcut dokümanlardaki bilgiler ışığında yanıtla.\n\nKurallar:\n1. Sadece verilen bilgileri kullan\n2. Türkçe yanıtla\n3. Dostça ve yardımsever ol\n4. Bilgin yoksa açıkça söyle\n5. Kaynak belgeleri belirt\n6. Kısa ve öz yanıtlar ver\n7. Kullanıcının ${metadata.userRole} rolünde olduğunu unutma\n8. ${metadata.subscription} abonelik seviyesine uygun yanıt ver\n\nMevcut Bilgiler:\n${context}\n\nŞirket: ${metadata.companyName}\nKullanıcı Rolü: ${metadata.userRole}\nAbonelik: ${metadata.subscription}\nZaman Dilimi: ${metadata.clientCurrentTimezone}`;\n\n// Prepare conversation history\nconst messages = [\n  {\n    role: 'system',\n    content: systemPrompt\n  },\n  {\n    role: 'user',\n    content: userQuery\n  }\n];\n\nreturn [{\n  json: {\n    messages,\n    context,\n    sourceDocuments,\n    hasContext: searchResults.length > 0,\n    userQuery,\n    metadata\n  }\n}];"
+      },
+      "id": "build-context",
+      "name": "Build AI Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4"
+            },
+            {
+              "name": "messages",
+              "value": "={{ $json.messages }}"
+            },
+            {
+              "name": "temperature",
+              "value": 0.7
+            },
+            {
+              "name": "max_tokens",
+              "value": 1000
+            },
+            {
+              "name": "stream",
+              "value": false
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "openai-chat",
+      "name": "OpenAI Chat Completion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process OpenAI response and prepare final output (as per prompt specs)\nconst openaiResponse = $('OpenAI Chat Completion').item(0).json;\nconst contextData = $('Build AI Context').item(0).json;\nconst metadata = contextData.metadata;\n\n// Extract AI response\nconst aiMessage = openaiResponse.choices?.[0]?.message?.content || 'Üzgünüm, şu anda yanıt veremiyorum.';\n\n// Calculate response time\nconst processingStart = $('Parse Chat Input').item(0).json.processingTimestamp;\nconst responseTime = Date.now() - processingStart;\n\n// Generate follow-up prompts based on context and Turkish language\nconst followUpPrompts = [];\nif (contextData.hasContext) {\n  followUpPrompts.push(\n    'Bu konuda daha detaylı bilgi alabilir miyim?',\n    'Başka hangi konularda yardım edebilirsiniz?',\n    'Bu bilgiyle ilgili dokümanları görebilir miyim?'\n  );\n} else {\n  followUpPrompts.push(\n    'Hangi konularda yardım edebilirsiniz?',\n    'Mevcut dokümanlarda neler var?',\n    'Nasıl daha iyi yardım alabilirim?'\n  );\n}\n\n// Prepare response in N8N Chat format (exact prompt specification)\nconst response = {\n  output: aiMessage,\n  followUpPrompts: followUpPrompts,\n  metadata: {\n    responseTime: `${responseTime}ms`,\n    hasContext: contextData.hasContext,\n    sourceCount: contextData.sourceDocuments.length,\n    timestamp: new Date().toISOString(),\n    locale: metadata.locale || 'tr',\n    customerId: metadata.customerId,\n    widgetId: metadata.widgetId,\n    sessionId: metadata.sessionId\n  }\n};\n\n// Add attachments if sources available (prompt specification)\nif (contextData.sourceDocuments.length > 0) {\n  response.attachments = contextData.sourceDocuments.map(doc => ({\n    type: 'document',\n    filename: doc.filename,\n    similarity: Math.round(doc.similarity * 100) + '%'\n  }));\n}\n\nreturn [{\n  json: response\n}];"
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{ $env.BACKEND_URL }}/api/analytics/track",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.BACKEND_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "customerId",
+              "value": "={{ $('Parse Chat Input').item(0).json.customerId }}"
+            },
+            {
+              "name": "widgetId",
+              "value": "={{ $('Parse Chat Input').item(0).json.widgetId }}"
+            },
+            {
+              "name": "sessionId",
+              "value": "={{ $('Parse Chat Input').item(0).json.sessionId }}"
+            },
+            {
+              "name": "type",
+              "value": "chat_interaction"
+            },
+            {
+              "name": "data",
+              "value": "={{ {\n  query: $('Parse Chat Input').item(0).json.userQuery,\n  responseTime: $('Format Response').item(0).json.metadata.responseTime,\n  hasContext: $('Format Response').item(0).json.metadata.hasContext,\n  sourceCount: $('Format Response').item(0).json.metadata.sourceCount,\n  tokensUsed: $('OpenAI Chat Completion').item(0).json.usage?.total_tokens || 0,\n  userRole: $('Parse Chat Input').item(0).json.metadata.userRole,\n  subscription: $('Parse Chat Input').item(0).json.metadata.subscription\n} }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 5000,\n          "ignore_ssl_issues": false
+        }
+      },
+      "id": "track-analytics",
+      "name": "Track Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 180],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "jsonOutput": {
+          "output": "={{ JSON.stringify($('Format Response').item(0).json.output) }}",
+          "followUpPrompts": "={{ JSON.stringify($('Format Response').item(0).json.followUpPrompts) }}",
+          "attachments": "={{ $('Format Response').item(0).json.attachments ? JSON.stringify($('Format Response').item(0).json.attachments) : '[]' }}",
+          "metadata": "={{ JSON.stringify($('Format Response').item(0).json.metadata) }}"
+        }
+      },
+      "id": "respond-to-chat",
+      "name": "Respond to Chat",
+      "type": "n8n-nodes-langchain.respondToChat",
+      "typeVersion": 1,
+      "position": [2220, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle file upload processing (as per prompt specs)\nconst files = $('Parse Chat Input').item(0).json.files;\nconst customerId = $('Parse Chat Input').item(0).json.customerId;\nconst widgetId = $('Parse Chat Input').item(0).json.widgetId;\nconst userQuery = $('Parse Chat Input').item(0).json.userQuery;\n\n// Process each file and extract text\nconst processedFiles = [];\nlet extractedText = '';\n\nfor (const file of files) {\n  // File processing logic would go here\n  // For now, we'll simulate file processing\n  processedFiles.push({\n    name: file.filename || file.name,\n    size: file.size,\n    type: file.mimeType || file.type,\n    url: file.url,\n    status: 'processed'\n  });\n  \n  // Extract text (this would be actual text extraction in real implementation)\n  extractedText += `\\n\\nDosya içeriği (${file.filename || file.name}):\\n[Dosya içeriği burada olacak]`;\n}\n\nreturn [{\n  json: {\n    customerId,\n    widgetId,\n    userQuery,\n    files: processedFiles,\n    extractedText: extractedText.trim(),\n    processedCount: processedFiles.length\n  }\n}];"
+      },
+      "id": "process-files",
+      "name": "Process Uploaded Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge file content with original query (prompt specification)\nconst fileProcessingResult = $('Process Uploaded Files').item(0).json;\nconst originalInput = $('Parse Chat Input').item(0).json;\n\n// Combine file content with original query\nlet enhancedQuery = originalInput.userQuery;\n\nif (fileProcessingResult.extractedText) {\n  enhancedQuery = `Kullanıcı sorusu: ${originalInput.userQuery}\\n\\nYüklenen dosya içeriği:\\n${fileProcessingResult.extractedText}`;\n}\n\n// Return enhanced data for further processing\nreturn [{\n  json: {\n    ...originalInput,\n    userQuery: enhancedQuery,\n    processedFiles: fileProcessingResult.files || [],\n    hasProcessedFiles: true,\n    fileProcessingInfo: {\n      processedCount: fileProcessingResult.processedCount || 0,\n      extractedTextLength: fileProcessingResult.extractedText?.length || 0\n    }\n  }\n}];"
+      },
+      "id": "merge-file-content",
+      "name": "Merge File Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error handling for the workflow\nconst error = $json.error || 'Bilinmeyen bir hata oluştu.';\nconst originalInput = $('Parse Chat Input').first()?.json || {};\n\n// Log error for debugging\nconsole.error('Workflow Error:', {\n  error,\n  customerId: originalInput.customerId,\n  widgetId: originalInput.widgetId,\n  query: originalInput.userQuery,\n  timestamp: new Date().toISOString()\n});\n\n// Prepare user-friendly error response (prompt specification)\nconst errorResponse = {\n  output: 'Üzgünüm, şu anda teknik bir sorun yaşıyoruz. Lütfen birkaç dakika sonra tekrar deneyin.',\n  followUpPrompts: [\n    'Tekrar deneyin',\n    'Farklı bir soru sorun',\n    'Destek ile iletişime geçin'\n  ],\n  metadata: {\n    error: true,\n    timestamp: new Date().toISOString(),\n    locale: originalInput.metadata?.locale || 'tr',\n    customerId: originalInput.customerId,\n    widgetId: originalInput.widgetId\n  }\n};\n\nreturn [{\n  json: errorResponse\n}];"
+      },
+      "id": "error-handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "jsonOutput": {
+          "output": "={{ JSON.stringify($json.output) }}",
+          "followUpPrompts": "={{ JSON.stringify($json.followUpPrompts) }}",
+          "metadata": "={{ JSON.stringify($json.metadata) }}"
+        }
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-langchain.respondToChat",
+      "typeVersion": 1,
+      "position": [1780, 420]
+    }
+  ],
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Chat Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Chat Input": {
+      "main": [
+        [
+          {
+            "node": "Check for Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Files": {
+      "main": [
+        [
+          {
+            "node": "Process Uploaded Files",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Query Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Uploaded Files": {
+      "main": [
+        [
+          {
+            "node": "Merge File Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge File Content": {
+      "main": [
+        [
+          {
+            "node": "Generate Query Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Query Embedding": {
+      "main": [
+        [
+          {
+            "node": "Vector Search Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Search Documents": {
+      "main": [
+        [
+          {
+            "node": "Build AI Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build AI Context": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Chat Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Completion": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Track Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Track Analytics": {
+      "main": [
+        [
+          {
+            "node": "Respond to Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-03-21T10:00:00.000Z",
+      "updatedAt": "2024-03-21T10:00:00.000Z",
+      "id": "rag-chat-corrected",
+      "name": "RAG Chat Corrected"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-03-21T10:00:00.000Z",
+  "versionId": "2"
+}

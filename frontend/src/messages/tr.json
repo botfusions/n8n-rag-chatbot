@@ -1,0 +1,221 @@
+{
+  "common": {
+    "loading": "Yükleniyor...",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "create": "Oluştur",
+    "update": "Güncelle",
+    "submit": "Gönder",
+    "back": "Geri",
+    "next": "İleri",
+    "previous": "Önceki",
+    "search": "Ara",
+    "clear": "Temizle",
+    "close": "Kapat",
+    "open": "Aç",
+    "yes": "Evet",
+    "no": "Hayır",
+    "error": "Hata",
+    "success": "Başarılı",
+    "warning": "Uyarı",
+    "info": "Bilgi"
+  },
+  "navigation": {
+    "home": "Ana Sayfa",
+    "dashboard": "Panel",
+    "chatbots": "Chatbot'lar",
+    "documents": "Dökümanlar",
+    "analytics": "Analitik",
+    "settings": "Ayarlar",
+    "profile": "Profil",
+    "logout": "Çıkış Yap",
+    "login": "Giriş Yap",
+    "register": "Kayıt Ol"
+  },
+  "auth": {
+    "login": {
+      "title": "Giriş Yap",
+      "subtitle": "Hesabınıza giriş yapın",
+      "email": "E-posta",
+      "password": "Şifre",
+      "forgotPassword": "Şifremi Unuttum",
+      "signIn": "Giriş Yap",
+      "noAccount": "Hesabınız yok mu?",
+      "createAccount": "Hesap oluşturun",
+      "error": "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin."
+    },
+    "register": {
+      "title": "Kayıt Ol",
+      "subtitle": "Yeni hesap oluşturun",
+      "firstName": "Ad",
+      "lastName": "Soyad",
+      "email": "E-posta",
+      "password": "Şifre",
+      "confirmPassword": "Şifre Tekrarı",
+      "signUp": "Kayıt Ol",
+      "hasAccount": "Zaten hesabınız var mı?",
+      "signInNow": "Giriş yapın",
+      "error": "Kayıt olunamadı. Lütfen tekrar deneyin.",
+      "success": "Kayıt başarılı! E-postanızı doğrulayın."
+    },
+    "resetPassword": {
+      "title": "Şifre Sıfırla",
+      "subtitle": "Şifrenizi sıfırlamak için e-posta adresinizi girin",
+      "email": "E-posta",
+      "sendReset": "Sıfırlama Bağlantısı Gönder",
+      "backToLogin": "Giriş sayfasına dön",
+      "success": "Şifre sıfırlama bağlantısı e-postanıza gönderildi."
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Akıllı Chatbot ile Müşteri Deneyiminizi Yükseltin",
+      "subtitle": "RAG teknolojisi ile güçlendirilmiş, kişiselleştirilebilir chatbot'lar oluşturun. Müşterilerinize 7/24 anında ve doğru yanıtlar verin.",
+      "getStarted": "Ücretsiz Başlayın",
+      "watchDemo": "Demo İzle"
+    },
+    "features": {
+      "title": "Güçlü Özellikler",
+      "subtitle": "Modern teknoloji ile donatılmış chatbot'lar",
+      "feature1": {
+        "title": "RAG Teknolojisi",
+        "description": "Kendi verilerinizle eğitilmiş, context-aware yanıtlar"
+      },
+      "feature2": {
+        "title": "Kolay Entegrasyon",
+        "description": "Web sitenize tek satır kod ile entegre edin"
+      },
+      "feature3": {
+        "title": "Çoklu Dil Desteği",
+        "description": "Türkçe ve İngilizce dahil çoklu dil desteği"
+      },
+      "feature4": {
+        "title": "Gerçek Zamanlı Analitik",
+        "description": "Detaylı raporlar ve performans metrikleri"
+      },
+      "feature5": {
+        "title": "Özelleştirilebilir Arayüz",
+        "description": "Markanıza uygun tasarım ve tema seçenekleri"
+      },
+      "feature6": {
+        "title": "7/24 Destek",
+        "description": "Kesintisiz müşteri hizmeti deneyimi"
+      }
+    },
+    "cta": {
+      "title": "Bugün Başlayın",
+      "subtitle": "Chatbot'unuzu oluşturmak sadece birkaç dakika",
+      "getStarted": "Ücretsiz Deneyin"
+    }
+  },
+  "dashboard": {
+    "title": "Panel",
+    "welcome": "Hoş geldiniz",
+    "overview": "Dashboard'unuzda widget'larınızı, dökümanlarınızı ve aktivitelerinizi yönetin",
+    "stats": {
+      "totalWidgets": "Toplam Widget",
+      "totalDocuments": "Toplam Döküman",
+      "totalMessages": "Toplam Mesaj",
+      "activeChats": "Aktif Sohbet"
+    },
+    "quickActions": {
+      "title": "Hızlı İşlemler",
+      "createWidget": "Yeni Widget Oluştur",
+      "uploadDocuments": "Döküman Yükle",
+      "viewAnalytics": "Analitikleri Görüntüle"
+    },
+    "documentStatus": {
+      "title": "Döküman Durumları",
+      "completed": "Tamamlandı",
+      "processing": "İşleniyor",
+      "failed": "Başarısız"
+    },
+    "recentActivity": {
+      "title": "Son Aktiviteler",
+      "noActivity": "Henüz aktivite bulunmuyor"
+    },
+    "activity": {
+      "newMessage": "Yeni mesaj: {content}",
+      "documentUploaded": "Döküman yüklendi: {filename}",
+      "widgetCreated": "Widget oluşturuldu: {name}"
+    },
+    "time": {
+      "now": "Şimdi",
+      "minutesAgo": "{count} dakika önce",
+      "hoursAgo": "{count} saat önce",
+      "daysAgo": "{count} gün önce"
+    }
+  },
+  "chatbots": {
+    "title": "Chatbot'larım",
+    "createNew": "Yeni Chatbot",
+    "empty": "Henüz chatbot'unuz yok",
+    "emptyDescription": "İlk chatbot'unuzu oluşturmak için başlayın",
+    "status": {
+      "active": "Aktif",
+      "inactive": "Pasif"
+    },
+    "actions": {
+      "edit": "Düzenle",
+      "settings": "Ayarlar",
+      "analytics": "Analitik",
+      "delete": "Sil"
+    }
+  },
+  "documents": {
+    "title": "Döküman Yönetimi",
+    "description": "Chatbot'larınız için dökümanları yükleyin ve yönetin",
+    "upload": "Döküman Yükle",
+    "selectWidget": "Widget Seçin",
+    "selectWidgetOption": "Bir widget seçin...",
+    "selectFiles": "Dosya Seçin",
+    "uploadFiles": "Dosyaları Yükle",
+    "uploading": "Yükleniyor...",
+    "uploadProgress": "Yükleme İlerlemesi",
+    "uploadSuccess": "{count} dosya başarıyla yüklendi",
+    "uploadFailed": "{count} dosya yüklenemedi",
+    "uploadError": "Yükleme sırasında hata oluştu",
+    "searchPlaceholder": "Döküman ara...",
+    "allWidgets": "Tüm Widget'lar",
+    "list": "Döküman Listesi",
+    "noDocuments": "Henüz döküman bulunmuyor",
+    "filename": "Dosya Adı",
+    "status": {
+      "pending": "Bekliyor",
+      "processing": "İşleniyor",
+      "completed": "Tamamlandı",
+      "failed": "Başarısız"
+    },
+    "size": "Boyut",
+    "chunks": "Parça Sayısı",
+    "uploadDate": "Yükleme Tarihi",
+    "actions": "İşlemler",
+    "confirmDelete": "Bu dökümanı silmek istediğinizden emin misiniz?",
+    "deleteSuccess": "Döküman başarıyla silindi",
+    "deleteError": "Döküman silinirken hata oluştu",
+    "failed": "Başarısız"
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "profile": {
+      "title": "Profil Bilgileri",
+      "firstName": "Ad",
+      "lastName": "Soyad",
+      "email": "E-posta",
+      "save": "Profili Güncelle"
+    },
+    "preferences": {
+      "title": "Tercihler",
+      "language": "Dil",
+      "theme": "Tema",
+      "notifications": "Bildirimler"
+    },
+    "security": {
+      "title": "Güvenlik",
+      "changePassword": "Şifre Değiştir",
+      "twoFactor": "İki Faktörlü Doğrulama"
+    }
+  }
+}

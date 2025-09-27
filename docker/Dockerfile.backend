@@ -1,0 +1,77 @@
+# Backend Dockerfile - Express.js with TypeScript
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat python3 make g++
+WORKDIR /app
+
+# Copy package files
+COPY backend/package.json backend/package-lock.json* ./
+RUN \
+  if [ -f package-lock.json ]; then npm ci --only=production; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
+
+# Build stage
+FROM base AS builder
+WORKDIR /app
+
+# Install all dependencies (including dev dependencies)
+COPY backend/package.json backend/package-lock.json* ./
+RUN npm ci
+
+# Copy source code
+COPY backend/ .
+
+# Build TypeScript
+RUN npm run build
+
+# Production stage
+FROM base AS runner
+WORKDIR /app
+
+# Install production dependencies and required tools
+RUN apk add --no-cache \
+    curl \
+    python3 \
+    make \
+    g++ \
+    cairo-dev \
+    jpeg-dev \
+    pango-dev \
+    musl-dev \
+    giflib-dev \
+    pixman-dev \
+    pangomm-dev \
+    libjpeg-turbo-dev \
+    freetype-dev
+
+# Create app user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 expressjs
+
+# Copy production dependencies
+COPY --from=deps --chown=expressjs:nodejs /app/node_modules ./node_modules
+
+# Copy built application
+COPY --from=builder --chown=expressjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=expressjs:nodejs /app/package.json ./package.json
+
+# Create necessary directories
+RUN mkdir -p /app/uploads /app/logs && \
+    chown -R expressjs:nodejs /app/uploads /app/logs
+
+# Environment variables
+ENV NODE_ENV=production
+ENV PORT=3001
+
+USER expressjs
+
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:3001/api/health || exit 1
+
+CMD ["node", "dist/app.js"]

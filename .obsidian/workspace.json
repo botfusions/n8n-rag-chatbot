@@ -1,0 +1,216 @@
+{
+  "main": {
+    "id": "4c2d626d9a9200c8",
+    "type": "split",
+    "children": [
+      {
+        "id": "ff1a09acc115d47d",
+        "type": "tabs",
+        "dimension": 69.41176470588235,
+        "children": [
+          {
+            "id": "c366e2dd4394380b",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "PROMPT.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "PROMPT"
+            }
+          }
+        ]
+      },
+      {
+        "id": "3b1df17a46c37da7",
+        "type": "tabs",
+        "dimension": 30.58823529411765,
+        "children": [
+          {
+            "id": "8dd8890b952b4865",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Grafik Görünümü"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "2e4292d2a6c83fe1",
+    "type": "split",
+    "children": [
+      {
+        "id": "b130b243beedf55a",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "6ff2cf94637429f2",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Dosya Gezgini"
+            }
+          },
+          {
+            "id": "595c649d8452198d",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Ara"
+            }
+          },
+          {
+            "id": "a584c40717aa12bd",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Yer İmleri"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "e442cc1ad895ba6b",
+    "type": "split",
+    "children": [
+      {
+        "id": "637c9da32eba648c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "48be455db88a2617",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "PROMPT.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "PROMPT için geri bağlantılar"
+            }
+          },
+          {
+            "id": "9ce0a28912a76692",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "PROMPT.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "PROMPT'dan giden bağlantılar"
+            }
+          },
+          {
+            "id": "40a214ca6b82bcbe",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Etiketler"
+            }
+          },
+          {
+            "id": "511c7f8467969600",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "PROMPT.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "PROMPT ana hatları"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Hızlı geçişi aç": false,
+      "graph:Grafik görünümünü aç": false,
+      "canvas:Yeni tuval oluşturun": false,
+      "daily-notes:Bugünün Notunu Aç": false,
+      "templates:Şablon ekle": false,
+      "command-palette:Komut paletini aç": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "6ff2cf94637429f2",
+  "lastOpenFiles": [
+    "frontend/src/messages/en.json.tmp.16240.1758973722751",
+    "frontend/src/app/dashboard/page.tsx.tmp.16240.1758973685395",
+    "frontend/src/app/dashboard/page.tsx.tmp.16240.1758973641258",
+    "frontend/src/app/dashboard/page.tsx.tmp.16240.1758973618121",
+    "frontend/src/app/dashboard/documents/page.tsx",
+    "frontend/src/app/dashboard/documents",
+    "frontend/src/messages/tr.json.tmp.16240.1758973464467",
+    "frontend/src/messages/tr.json.tmp.16240.1758973439985",
+    "frontend/src/app/api/trigger-document-processing/route.ts",
+    "frontend/src/app/api/trigger-document-processing",
+    "frontend/src/app/api",
+    "docs/backend-api-configuration.md",
+    "docs/supabase-vector-search-update.md",
+    "docs/supabase-self-hosted-auth-fix.md",
+    "docs/deployment-guide.md",
+    "docs/n8n-workflows/README.md",
+    "backend/README.md",
+    "frontend/README.md",
+    "TODO.md",
+    "README.md",
+    "Prompt eklenecekler.md",
+    "PROMPT.md",
+    "Hoş geldiniz.md"
+  ]
+}

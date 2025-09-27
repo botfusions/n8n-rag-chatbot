@@ -1,0 +1,569 @@
+{
+  "name": "Document Processing Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "documents/process/{{ $nodeParameters['customerId'] }}",
+        "options": {
+          "cors": {
+            "allowedOrigins": "*"
+          }
+        }
+      },
+      "id": "document-trigger",
+      "name": "Document Processing Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse document processing request\nconst documentId = $json.documentId;\nconst customerId = $json.customerId;\nconst widgetId = $json.widgetId;\nconst filename = $json.filename;\nconst fileUrl = $json.fileUrl;\nconst fileType = $json.fileType;\n\n// Validate required fields\nif (!documentId || !customerId || !fileUrl) {\n  throw new Error('Missing required fields: documentId, customerId, or fileUrl');\n}\n\n// Determine processing strategy based on file type\nlet processingStrategy = 'text';\nif (fileType.includes('pdf')) {\n  processingStrategy = 'pdf';\n} else if (fileType.includes('word') || fileType.includes('docx')) {\n  processingStrategy = 'docx';\n} else if (fileType.includes('text') || fileType.includes('markdown')) {\n  processingStrategy = 'text';\n}\n\nreturn [{\n  json: {\n    documentId,\n    customerId,\n    widgetId: widgetId || null,\n    filename,\n    fileUrl,\n    fileType,\n    processingStrategy,\n    startTime: Date.now()\n  }\n}];"
+      },
+      "id": "parse-document-request",
+      "name": "Parse Document Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{ $env.BACKEND_URL }}/api/documents/extract-text",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.BACKEND_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "documentId",
+              "value": "={{ $json.documentId }}"
+            },
+            {
+              "name": "fileUrl",
+              "value": "={{ $json.fileUrl }}"
+            },
+            {
+              "name": "fileType",
+              "value": "={{ $json.fileType }}"
+            },
+            {
+              "name": "processingStrategy",
+              "value": "={{ $json.processingStrategy }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "extract-text",
+      "name": "Extract Text from Document",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process text extraction results\nconst extractionResult = $json;\nconst documentInfo = $('Parse Document Request').item(0).json;\n\n// Get extracted text\nconst extractedText = extractionResult.extractedText || '';\nconst pageCount = extractionResult.pageCount || 1;\nconst wordCount = extractionResult.wordCount || 0;\n\n// Validate extraction\nif (!extractedText || extractedText.trim().length < 10) {\n  throw new Error('Text extraction failed or document is too short');\n}\n\n// Clean the text\nconst cleanedText = extractedText\n  .replace(/\\s+/g, ' ')  // Replace multiple spaces/newlines with single space\n  .replace(/[^\\w\\s\\u00C0-\\u024F\\u1E00-\\u1EFF\\.,!?;:()\"'-]/g, '') // Keep letters, Turkish chars, basic punctuation\n  .trim();\n\n// Calculate chunk parameters\nconst chunkSize = 1000; // characters\nconst chunkOverlap = 200; // characters\nconst estimatedChunks = Math.ceil(cleanedText.length / (chunkSize - chunkOverlap));\n\nreturn [{\n  json: {\n    ...documentInfo,\n    extractedText: cleanedText,\n    textLength: cleanedText.length,\n    pageCount,\n    wordCount,\n    chunkSize,\n    chunkOverlap,\n    estimatedChunks,\n    extractionTime: Date.now() - documentInfo.startTime\n  }\n}];"
+      },
+      "id": "process-text",
+      "name": "Process Extracted Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Chunk the document text intelligently\nconst data = $json;\nconst text = data.extractedText;\nconst chunkSize = data.chunkSize;\nconst chunkOverlap = data.chunkOverlap;\n\n// Function to find good chunk boundaries\nfunction findChunkBoundary(text, startPos, maxPos) {\n  // Look for sentence endings near the chunk boundary\n  const sentenceEnds = ['.', '!', '?', '\\n\\n'];\n  \n  for (let i = Math.min(maxPos, text.length - 1); i >= startPos + chunkSize * 0.8; i--) {\n    if (sentenceEnds.includes(text[i])) {\n      return i + 1;\n    }\n  }\n  \n  // If no sentence end found, look for word boundaries\n  for (let i = Math.min(maxPos, text.length - 1); i >= startPos + chunkSize * 0.8; i--) {\n    if (text[i] === ' ') {\n      return i + 1;\n    }\n  }\n  \n  // Fallback to exact position\n  return Math.min(maxPos, text.length);\n}\n\n// Create chunks\nconst chunks = [];\nlet currentPos = 0;\nlet chunkIndex = 0;\n\nwhile (currentPos < text.length) {\n  const chunkStart = currentPos;\n  const idealEnd = currentPos + chunkSize;\n  const chunkEnd = findChunkBoundary(text, chunkStart, idealEnd);\n  \n  const chunkContent = text.slice(chunkStart, chunkEnd).trim();\n  \n  if (chunkContent.length > 0) {\n    chunks.push({\n      chunkIndex: chunkIndex,\n      content: chunkContent,\n      startPos: chunkStart,\n      endPos: chunkEnd,\n      length: chunkContent.length,\n      wordCount: chunkContent.split(/\\s+/).length\n    });\n    chunkIndex++;\n  }\n  \n  // Move to next chunk with overlap\n  currentPos = chunkEnd - chunkOverlap;\n  if (currentPos >= chunkEnd) break; // Prevent infinite loop\n}\n\nreturn [{\n  json: {\n    ...data,\n    chunks: chunks,\n    actualChunkCount: chunks.length,\n    chunkingTime: Date.now() - data.startTime - data.extractionTime\n  }\n}];"
+      },
+      "id": "chunk-document",
+      "name": "Chunk Document",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {}
+      },
+      "id": "batch-chunks",
+      "name": "Batch Chunks for Processing",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare chunks for embedding generation\nconst documentData = $('Chunk Document').item(0).json;\nconst batchData = $json;\n\n// Get current batch of chunks\nconst currentBatch = documentData.chunks.slice(\n  batchData.index * batchData.batchSize,\n  (batchData.index + 1) * batchData.batchSize\n);\n\n// Prepare embedding requests\nconst embeddingRequests = currentBatch.map(chunk => ({\n  text: chunk.content,\n  chunkId: `${documentData.documentId}_${chunk.chunkIndex}`,\n  chunkIndex: chunk.chunkIndex,\n  metadata: {\n    documentId: documentData.documentId,\n    filename: documentData.filename,\n    wordCount: chunk.wordCount,\n    startPos: chunk.startPos,\n    endPos: chunk.endPos\n  }\n}));\n\nreturn [{\n  json: {\n    ...documentData,\n    currentBatch: currentBatch,\n    embeddingRequests: embeddingRequests,\n    batchIndex: batchData.index,\n    totalBatches: Math.ceil(documentData.chunks.length / batchData.batchSize)\n  }\n}];"
+      },
+      "id": "prepare-embeddings",
+      "name": "Prepare Embedding Requests",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{ $env.BACKEND_URL }}/api/embeddings/batch-generate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.BACKEND_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "requests",
+              "value": "={{ $json.embeddingRequests }}"
+            },
+            {
+              "name": "customerId",
+              "value": "={{ $json.customerId }}"
+            },
+            {
+              "name": "documentId",
+              "value": "={{ $json.documentId }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "generate-embeddings",
+      "name": "Generate Embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{ $env.BACKEND_URL }}/api/documents/store-chunks",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.BACKEND_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "documentId",
+              "value": "={{ $('Prepare Embedding Requests').item(0).json.documentId }}"
+            },
+            {
+              "name": "customerId",
+              "value": "={{ $('Prepare Embedding Requests').item(0).json.customerId }}"
+            },
+            {
+              "name": "widgetId",
+              "value": "={{ $('Prepare Embedding Requests').item(0).json.widgetId }}"
+            },
+            {
+              "name": "chunks",
+              "value": "={{ $('Prepare Embedding Requests').item(0).json.currentBatch }}"
+            },
+            {
+              "name": "embeddings",
+              "value": "={{ $json.embeddings }}"
+            },
+            {
+              "name": "batchIndex",
+              "value": "={{ $('Prepare Embedding Requests').item(0).json.batchIndex }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "store-chunks",
+      "name": "Store Chunks in Database",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-last-batch",
+              "leftValue": "={{ $('Prepare Embedding Requests').item(0).json.batchIndex + 1 }}",
+              "rightValue": "={{ $('Prepare Embedding Requests').item(0).json.totalBatches }}",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-completion",
+      "name": "Check Processing Completion",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2220, 300]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "{{ $env.BACKEND_URL }}/api/documents/{{ $('Parse Document Request').item(0).json.documentId }}/complete",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.BACKEND_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "completed"
+            },
+            {
+              "name": "chunkCount",
+              "value": "={{ $('Chunk Document').item(0).json.actualChunkCount }}"
+            },
+            {
+              "name": "processingTime",
+              "value": "={{ Date.now() - $('Parse Document Request').item(0).json.startTime }}"
+            },
+            {
+              "name": "metadata",
+              "value": "={{ {\n  textLength: $('Process Extracted Text').item(0).json.textLength,\n  pageCount: $('Process Extracted Text').item(0).json.pageCount,\n  wordCount: $('Process Extracted Text').item(0).json.wordCount,\n  extractionTime: $('Process Extracted Text').item(0).json.extractionTime,\n  chunkingTime: $('Chunk Document').item(0).json.chunkingTime\n} }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "mark-completed",
+      "name": "Mark Document as Completed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2440, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{ $env.BACKEND_URL }}/api/notifications/processing-complete",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.BACKEND_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "customerId",
+              "value": "={{ $('Parse Document Request').item(0).json.customerId }}"
+            },
+            {
+              "name": "documentId",
+              "value": "={{ $('Parse Document Request').item(0).json.documentId }}"
+            },
+            {
+              "name": "filename",
+              "value": "={{ $('Parse Document Request').item(0).json.filename }}"
+            },
+            {
+              "name": "chunkCount",
+              "value": "={{ $('Chunk Document').item(0).json.actualChunkCount }}"
+            },
+            {
+              "name": "processingTime",
+              "value": "={{ Date.now() - $('Parse Document Request').item(0).json.startTime }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 5000
+        },
+        "alwaysOutputData": true,
+        "onError": "continueRegularOutput"
+      },
+      "id": "send-notification",
+      "name": "Send Completion Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2660, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle processing errors\nconst error = $json.error || $execution.lastNodeExecuted?.error?.message || 'Unknown processing error';\nconst documentData = $('Parse Document Request').first()?.json || {};\n\n// Log the error\nconsole.error('Document Processing Error:', {\n  error,\n  documentId: documentData.documentId,\n  customerId: documentData.customerId,\n  filename: documentData.filename,\n  timestamp: new Date().toISOString()\n});\n\n// Prepare error data for database update\nreturn [{\n  json: {\n    documentId: documentData.documentId,\n    error: error,\n    status: 'failed',\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "handle-error",
+      "name": "Handle Processing Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 520]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "{{ $env.BACKEND_URL }}/api/documents/{{ $json.documentId }}/failed",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.BACKEND_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "failed"
+            },
+            {
+              "name": "error",
+              "value": "={{ $json.error }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $json.timestamp }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        },
+        "alwaysOutputData": true,
+        "onError": "continueRegularOutput"
+      },
+      "id": "mark-failed",
+      "name": "Mark Document as Failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 520]
+    }
+  ],
+  "connections": {
+    "Document Processing Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Document Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Document Request": {
+      "main": [
+        [
+          {
+            "node": "Extract Text from Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Text from Document": {
+      "main": [
+        [
+          {
+            "node": "Process Extracted Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Extracted Text": {
+      "main": [
+        [
+          {
+            "node": "Chunk Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunk Document": {
+      "main": [
+        [
+          {
+            "node": "Batch Chunks for Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Chunks for Processing": {
+      "main": [
+        [
+          {
+            "node": "Prepare Embedding Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Embedding Requests": {
+      "main": [
+        [
+          {
+            "node": "Generate Embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Embeddings": {
+      "main": [
+        [
+          {
+            "node": "Store Chunks in Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Chunks in Database": {
+      "main": [
+        [
+          {
+            "node": "Check Processing Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Processing Completion": {
+      "main": [
+        [
+          {
+            "node": "Mark Document as Completed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Batch Chunks for Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Document as Completed": {
+      "main": [
+        [
+          {
+            "node": "Send Completion Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": {
+      "enabled": true,
+      "continueOnFail": false
+    }
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-03-21T10:00:00.000Z",
+      "updatedAt": "2024-03-21T10:00:00.000Z",
+      "id": "document-processing",
+      "name": "Document Processing"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-03-21T10:00:00.000Z",
+  "versionId": "1"
+}
