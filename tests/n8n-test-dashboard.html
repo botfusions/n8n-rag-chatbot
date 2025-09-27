@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N8N Workflow Test Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #FF8A56 0%, #FFAD56 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .config-section {
+            padding: 30px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .config-group {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+
+        .config-group h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.25);
+        }
+
+        .test-controls {
+            padding: 30px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        }
+
+        .results-section {
+            padding: 30px;
+        }
+
+        .test-result {
+            background: #f8f9fa;
+            border-left: 4px solid #6c757d;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .test-result.success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+
+        .test-result.failure {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .test-result.running {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .test-name {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .test-duration {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+
+        .test-details {
+            margin-top: 15px;
+        }
+
+        .test-response {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            margin-top: 20px;
+            border-radius: 10px;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status-indicators {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #6c757d;
+        }
+
+        .status-indicator.success {
+            background: #28a745;
+        }
+
+        .status-indicator.failure {
+            background: #dc3545;
+        }
+
+        .status-indicator.running {
+            background: #ffc107;
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 N8N Workflow Test Dashboard</h1>
+            <p>RAG Chatbot Workflow Test Otomasyonu</p>
+        </div>
+
+        <div class="config-section">
+            <h2>⚙️ Test Konfigürasyonu</h2>
+            <div class="config-grid">
+                <div class="config-group">
+                    <h3>🔗 Sunucu Ayarları</h3>
+                    <div class="input-group">
+                        <label for="n8nBaseUrl">N8N Base URL:</label>
+                        <input type="text" id="n8nBaseUrl" value="https://your-n8n-instance.com" placeholder="https://your-n8n-instance.com">
+                    </div>
+                </div>
+
+                <div class="config-group">
+                    <h3>🏢 Test Verileri</h3>
+                    <div class="input-group">
+                        <label for="testCustomerId">Customer ID:</label>
+                        <input type="text" id="testCustomerId" value="test-customer-001" placeholder="test-customer-001">
+                    </div>
+                    <div class="input-group">
+                        <label for="testWidgetId">Widget ID:</label>
+                        <input type="text" id="testWidgetId" value="test-widget-001" placeholder="test-widget-001">
+                    </div>
+                </div>
+
+                <div class="config-group">
+                    <h3>🤖 Bot Ayarları</h3>
+                    <div class="input-group">
+                        <label for="testCompanyName">Şirket Adı:</label>
+                        <input type="text" id="testCompanyName" value="Test Company Ltd." placeholder="Test Company Ltd.">
+                    </div>
+                    <div class="input-group">
+                        <label for="testBotName">Bot Adı:</label>
+                        <input type="text" id="testBotName" value="TestBot" placeholder="TestBot">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-controls">
+            <h2>🚀 Test Kontrolleri</h2>
+            <div style="margin-top: 20px;">
+                <button class="btn" id="runAllTestsBtn" onclick="runAllTests()">
+                    <span id="runAllTestsText">Tüm Testleri Çalıştır</span>
+                    <div class="loading" id="runAllTestsLoading" style="display: none;"></div>
+                </button>
+                <button class="btn btn-success" onclick="runSingleTest('basic')">Temel Test</button>
+                <button class="btn btn-success" onclick="runSingleTest('information')">Bilgi Sorgusu</button>
+                <button class="btn btn-success" onclick="runSingleTest('complex')">Karmaşık Problem</button>
+                <button class="btn btn-danger" onclick="clearResults()">Sonuçları Temizle</button>
+            </div>
+        </div>
+
+        <div class="results-section">
+            <h2>📊 Test Sonuçları</h2>
+            <div id="testResults"></div>
+            <div id="summarySection" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Test configuration object
+        let testConfig = {
+            n8nBaseUrl: 'https://your-n8n-instance.com',
+            testCustomerId: 'test-customer-001',
+            testWidgetId: 'test-widget-001',
+            testCompanyName: 'Test Company Ltd.',
+            testBotName: 'TestBot'
+        };
+
+        // Update config from form inputs
+        function updateConfig() {
+            testConfig.n8nBaseUrl = document.getElementById('n8nBaseUrl').value;
+            testConfig.testCustomerId = document.getElementById('testCustomerId').value;
+            testConfig.testWidgetId = document.getElementById('testWidgetId').value;
+            testConfig.testCompanyName = document.getElementById('testCompanyName').value;
+            testConfig.testBotName = document.getElementById('testBotName').value;
+        }
+
+        // Test results storage
+        let testResults = [];
+
+        // Utility functions
+        function makeRequest(url, data, method = 'POST') {
+            return fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+        }
+
+        function addTestResult(testName, success, response, duration, isRunning = false) {
+            const resultElement = document.createElement('div');
+            resultElement.className = `test-result ${isRunning ? 'running' : (success ? 'success' : 'failure')}`;
+            resultElement.id = `test-${testName.replace(/\\s+/g, '-').toLowerCase()}`;
+
+            const statusIndicator = success ? '✅' : (isRunning ? '⏳' : '❌');
+            const statusText = isRunning ? 'Çalışıyor...' : (success ? 'BAŞARILI' : 'BAŞARISIZ');
+
+            resultElement.innerHTML = `
+                <div class="test-header">
+                    <span class="test-name">${statusIndicator} ${testName}</span>
+                    <span class="test-duration">${duration}ms</span>
+                </div>
+                <div class="test-status">${statusText}</div>
+                ${!isRunning ? `
+                <div class="test-details">
+                    <strong>Yanıt:</strong>
+                    <div class="test-response">${JSON.stringify(response, null, 2)}</div>
+                </div>
+                ` : ''}
+            `;
+
+            if (isRunning) {
+                const existingResult = document.getElementById(`test-${testName.replace(/\\s+/g, '-').toLowerCase()}`);
+                if (existingResult) {
+                    existingResult.replaceWith(resultElement);
+                } else {
+                    document.getElementById('testResults').appendChild(resultElement);
+                }
+            } else {
+                const existingResult = document.getElementById(`test-${testName.replace(/\\s+/g, '-').toLowerCase()}`);
+                if (existingResult) {
+                    existingResult.replaceWith(resultElement);
+                } else {
+                    document.getElementById('testResults').appendChild(resultElement);
+                }
+            }
+        }
+
+        // Test functions
+        async function testBasicChatGreeting() {
+            updateConfig();
+            const testName = 'Temel Sohbet Testi';
+            addTestResult(testName, false, {}, 0, true);
+
+            const startTime = Date.now();
+            const testData = {
+                chatInput: 'Merhaba',
+                sessionId: 'test-session-001',
+                metadata: {
+                    customerId: testConfig.testCustomerId,
+                    widgetId: testConfig.testWidgetId,
+                    companyName: testConfig.testCompanyName,
+                    botName: testConfig.testBotName,
+                    locale: 'tr',
+                    customerName: 'Ahmet Yılmaz',
+                    timestamp: new Date().toISOString()
+                }
+            };
+
+            try {
+                const response = await makeRequest(
+                    `${testConfig.n8nBaseUrl}/webhook/chat/${testConfig.testWidgetId}`,
+                    testData
+                );
+
+                const result = await response.json();
+                const duration = Date.now() - startTime;
+
+                const success = response.ok &&
+                               result.output &&
+                               result.output.includes('Merhaba') &&
+                               result.followUpPrompts &&
+                               Array.isArray(result.followUpPrompts);
+
+                addTestResult(testName, success, result, duration);
+                return { testName, success, result, duration };
+            } catch (error) {
+                const duration = Date.now() - startTime;
+                addTestResult(testName, false, { error: error.message }, duration);
+                return { testName, success: false, error: error.message, duration };
+            }
+        }
+
+        async function testInformationQuery() {
+            updateConfig();
+            const testName = 'Bilgi Sorgusu Testi';
+            addTestResult(testName, false, {}, 0, true);
+
+            const startTime = Date.now();
+            const testData = {
+                chatInput: 'Çalışma saatleriniz nedir?',
+                sessionId: 'test-session-002',
+                metadata: {
+                    customerId: testConfig.testCustomerId,
+                    widgetId: testConfig.testWidgetId,
+                    companyName: testConfig.testCompanyName,
+                    locale: 'tr',
+                    timestamp: new Date().toISOString()
+                }
+            };
+
+            try {
+                const response = await makeRequest(
+                    `${testConfig.n8nBaseUrl}/webhook/chat/${testConfig.testWidgetId}`,
+                    testData
+                );
+
+                const result = await response.json();
+                const duration = Date.now() - startTime;
+
+                const success = response.ok &&
+                               result.output &&
+                               result.metadata &&
+                               typeof result.metadata.hasContext === 'boolean';
+
+                addTestResult(testName, success, result, duration);
+                return { testName, success, result, duration };
+            } catch (error) {
+                const duration = Date.now() - startTime;
+                addTestResult(testName, false, { error: error.message }, duration);
+                return { testName, success: false, error: error.message, duration };
+            }
+        }
+
+        async function testComplexProblemSolving() {
+            updateConfig();
+            const testName = 'Karmaşık Problem Testi';
+            addTestResult(testName, false, {}, 0, true);
+
+            const startTime = Date.now();
+            const testData = {
+                chatInput: 'Siparişim kayboldu ve para iadesi almak istiyorum. Ne yapmalıyım?',
+                sessionId: 'test-session-003',
+                metadata: {
+                    customerId: testConfig.testCustomerId,
+                    widgetId: testConfig.testWidgetId,
+                    companyName: testConfig.testCompanyName,
+                    locale: 'tr',
+                    userRole: 'customer',
+                    timestamp: new Date().toISOString()
+                }
+            };
+
+            try {
+                const response = await makeRequest(
+                    `${testConfig.n8nBaseUrl}/webhook/chat/${testConfig.testWidgetId}`,
+                    testData
+                );
+
+                const result = await response.json();
+                const duration = Date.now() - startTime;
+
+                const success = response.ok &&
+                               result.output &&
+                               result.followUpPrompts &&
+                               result.followUpPrompts.length >= 2;
+
+                addTestResult(testName, success, result, duration);
+                return { testName, success, result, duration };
+            } catch (error) {
+                const duration = Date.now() - startTime;
+                addTestResult(testName, false, { error: error.message }, duration);
+                return { testName, success: false, error: error.message, duration };
+            }
+        }
+
+        // Single test runner
+        async function runSingleTest(testType) {
+            switch(testType) {
+                case 'basic':
+                    return await testBasicChatGreeting();
+                case 'information':
+                    return await testInformationQuery();
+                case 'complex':
+                    return await testComplexProblemSolving();
+                default:
+                    console.error('Unknown test type:', testType);
+            }
+        }
+
+        // Main test runner
+        async function runAllTests() {
+            const button = document.getElementById('runAllTestsBtn');
+            const text = document.getElementById('runAllTestsText');
+            const loading = document.getElementById('runAllTestsLoading');
+
+            button.disabled = true;
+            text.style.display = 'none';
+            loading.style.display = 'inline-block';
+
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('summarySection').style.display = 'none';
+            testResults = [];
+
+            try {
+                // Run all tests
+                testResults.push(await testBasicChatGreeting());
+                testResults.push(await testInformationQuery());
+                testResults.push(await testComplexProblemSolving());
+
+                // Show summary
+                showSummary();
+            } catch (error) {
+                console.error('Test suite failed:', error);
+            } finally {
+                button.disabled = false;
+                text.style.display = 'inline';
+                loading.style.display = 'none';
+            }
+        }
+
+        // Show test summary
+        function showSummary() {
+            const successCount = testResults.filter(r => r.success).length;
+            const totalCount = testResults.length;
+            const averageDuration = Math.round(
+                testResults.reduce((sum, r) => sum + r.duration, 0) / totalCount
+            );
+            const successRate = Math.round((successCount / totalCount) * 100);
+
+            const summaryHtml = `
+                <div class="summary">
+                    <h2>📈 Test Özeti</h2>
+                    <div class="summary-stats">
+                        <div class="stat">
+                            <div class="stat-number">${successCount}/${totalCount}</div>
+                            <div class="stat-label">Başarılı Test</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number">${successRate}%</div>
+                            <div class="stat-label">Başarı Oranı</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number">${averageDuration}ms</div>
+                            <div class="stat-label">Ortalama Süre</div>
+                        </div>
+                    </div>
+                    ${successCount === totalCount
+                        ? '<p style="margin-top: 20px; font-size: 1.2em;">🎉 Tüm testler başarılı! Workflow production\'a hazır.</p>'
+                        : '<p style="margin-top: 20px; font-size: 1.2em;">⚠️ Bazı testler başarısız. Workflow konfigürasyonunu kontrol edin.</p>'
+                    }
+                </div>
+            `;
+
+            document.getElementById('summarySection').innerHTML = summaryHtml;
+            document.getElementById('summarySection').style.display = 'block';
+        }
+
+        // Clear results
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('summarySection').style.display = 'none';
+            testResults = [];
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('N8N Workflow Test Dashboard loaded');
+        });
+    </script>
+</body>
+</html>

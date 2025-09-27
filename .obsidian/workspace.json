@@ -6,7 +6,7 @@
       {
         "id": "ff1a09acc115d47d",
         "type": "tabs",
-        "dimension": 69.41176470588235,
+        "dimension": 45.57761732851986,
         "children": [
           {
             "id": "c366e2dd4394380b",
@@ -14,12 +14,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "PROMPT.md",
+                "file": "TODO.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "PROMPT"
+              "title": "TODO"
             }
           }
         ]
@@ -27,7 +27,7 @@
       {
         "id": "3b1df17a46c37da7",
         "type": "tabs",
-        "dimension": 30.58823529411765,
+        "dimension": 54.42238267148014,
         "children": [
           {
             "id": "8dd8890b952b4865",
@@ -112,7 +112,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "PROMPT.md",
+                "file": "TODO.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -122,7 +122,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "PROMPT için geri bağlantılar"
+              "title": "TODO için geri bağlantılar"
             }
           },
           {
@@ -131,12 +131,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "PROMPT.md",
+                "file": "TODO.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "PROMPT'dan giden bağlantılar"
+              "title": "TODO'dan giden bağlantılar"
             }
           },
           {
@@ -160,13 +160,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "PROMPT.md",
+                "file": "TODO.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "PROMPT ana hatları"
+              "title": "TODO ana hatları"
             }
           }
         ]
@@ -187,19 +187,33 @@
       "bases:Create new base": false
     }
   },
-  "active": "6ff2cf94637429f2",
+  "active": "c366e2dd4394380b",
   "lastOpenFiles": [
-    "frontend/src/messages/en.json.tmp.16240.1758973722751",
-    "frontend/src/app/dashboard/page.tsx.tmp.16240.1758973685395",
-    "frontend/src/app/dashboard/page.tsx.tmp.16240.1758973641258",
-    "frontend/src/app/dashboard/page.tsx.tmp.16240.1758973618121",
-    "frontend/src/app/dashboard/documents/page.tsx",
-    "frontend/src/app/dashboard/documents",
-    "frontend/src/messages/tr.json.tmp.16240.1758973464467",
-    "frontend/src/messages/tr.json.tmp.16240.1758973439985",
-    "frontend/src/app/api/trigger-document-processing/route.ts",
-    "frontend/src/app/api/trigger-document-processing",
-    "frontend/src/app/api",
+    "README.md",
+    "PROMPT.md",
+    "TODO.md.tmp.33572.1758978861387",
+    "TODO.md.tmp.33572.1758978853457",
+    "TODO.md.tmp.33572.1758978839191",
+    "CLAUDE.md.tmp.33572.1758978757188",
+    "docs/CLAUDE_CODE_N8N_MCP_SETUP.md",
+    "docs/CLAUDE_CODE_N8N_MCP_SETUP.md.tmp.16240.1758978347983",
+    "docs/CLAUDE_DESKTOP_N8N_MCP_CONFIG.md",
+    "docs/CLAUDE_DESKTOP_N8N_MCP_CONFIG.md.tmp.16240.1758978172883",
+    "docs/N8N_CONNECTION_SETUP.md",
+    "docs/N8N_SERVER_TROUBLESHOOTING.md",
+    "docs/N8N_SERVER_TROUBLESHOOTING.md.tmp.16240.1758977220577",
+    "docs/N8N_BOTFUSIONS_IMPORT.md",
+    "docs/N8N_BOTFUSIONS_IMPORT.md.tmp.16240.1758977047734",
+    "CLAUDE.md",
+    "CLAUDE.md.tmp.16240.1758976892031",
+    "docs/n8n-workflows/improved-document-processing-workflow.json.tmp.16240.1758976773995",
+    "docs/N8N_MANUAL_IMPORT_STEPS.md",
+    "docs/N8N_WORKFLOW_IMPORT_GUIDE.md",
+    "docs/CHATBOT_PROMPT_INTEGRATION.md",
+    "docs/CHATBOT_SYSTEM_PROMPT.md",
+    "N8N_ENV_SETUP.md",
+    "N8N_IMPORT_GUIDE.md",
+    "github-setup.md",
     "docs/backend-api-configuration.md",
     "docs/supabase-vector-search-update.md",
     "docs/supabase-self-hosted-auth-fix.md",
@@ -208,9 +222,7 @@
     "backend/README.md",
     "frontend/README.md",
     "TODO.md",
-    "README.md",
     "Prompt eklenecekler.md",
-    "PROMPT.md",
     "Hoş geldiniz.md"
   ]
 }

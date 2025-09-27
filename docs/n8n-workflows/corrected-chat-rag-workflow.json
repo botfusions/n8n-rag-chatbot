@@ -1,5 +1,5 @@
 {
-  "name": "N8N RAG Chat Workflow (Corrected)",
+  "name": "RAG Chat Main Workflow",
   "nodes": [
     {
       "parameters": {

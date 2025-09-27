@@ -1,5 +1,5 @@
 {
-  "name": "Improved Document Processing Workflow",
+  "name": "RAG Document Processing",
   "nodes": [
     {
       "parameters": {

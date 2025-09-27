@@ -1,0 +1,258 @@
+{
+  "name": "Customer Embedding RAG Chat",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "hostedChat",
+        "options": {
+          "loadPreviousSession": "fromMemory",
+          "responseMode": "responseNode"
+        }
+      },
+      "id": "chat-trigger",
+      "name": "Chat Trigger",
+      "type": "n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract chat input and customer metadata\nconst chatInput = $json.chatInput;\nconst sessionId = $json.sessionId;\nconst metadata = typeof $json.metadata === 'string' ? \n  JSON.parse($json.metadata) : \n  $json.metadata || {};\n\n// Extract customer information\nconst customerId = metadata.customerId;\nconst widgetId = metadata.widgetId;\nconst companyName = metadata.companyName || '';\n\nif (!customerId) {\n  throw new Error('Customer ID is required in metadata');\n}\n\n// Prepare for vector search\nreturn [{\n  json: {\n    chatInput,\n    sessionId,\n    customerId,\n    widgetId,\n    companyName,\n    metadata,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "extract-metadata",
+      "name": "Extract Customer Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "text-embedding-ada-002"
+            },
+            {
+              "name": "input",
+              "value": "={{ $json.chatInput }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "generate-query-embedding",
+      "name": "Generate Query Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{ $env.SUPABASE_URL }}/rest/v1/rpc/search_customer_embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "{{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query_embedding",
+              "value": "={{ `[${$json.data[0].embedding.join(',')}]` }}"
+            },
+            {
+              "name": "filter_customer_id",
+              "value": "={{ $('Extract Customer Metadata').item(0).json.customerId }}"
+            },
+            {
+              "name": "filter_kind",
+              "value": "document"
+            },
+            {
+              "name": "match_count",
+              "value": 5
+            },
+            {
+              "name": "similarity_threshold",
+              "value": 0.7
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "vector-search",
+      "name": "Vector Search Documents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build context from search results\nconst searchResults = $json || [];\nconst chatData = $('Extract Customer Metadata').item(0).json;\n\n// Build context from relevant documents\nlet context = '';\nif (searchResults.length > 0) {\n  context = searchResults.map((result, index) => {\n    const similarity = Math.round(result.similarity * 100);\n    return `[Kaynak ${index + 1} - Benzerlik: %${similarity}]\\n${result.text}\\n`;\n  }).join('\\n---\\n\\n');\n} else {\n  context = 'İlgili doküman bulunamadı.';\n}\n\n// System prompt for Turkish RAG chat\nconst systemPrompt = `Sen ${chatData.companyName || 'şirketimiz'} için yardımcı bir AI asistanısın. \n\nGörevin:\n- Kullanıcı sorularını Türkçe olarak yanıtlamak\n- Sadece sağlanan doküman içeriğine dayanarak yanıt vermek\n- Bilmediğin konularda dürüst olmak\n- Kibar ve profesyonel olmak\n\nKullanılacak Doküman İçeriği:\n${context}\n\nÖnemli: Yanıtlarını sadece yukarıdaki doküman içeriğine dayandır. Bilmediğin bir şey varsa \"Bu konuda elimde yeterli bilgi yok\" diyerek açıkla.`;\n\nreturn [{\n  json: {\n    ...chatData,\n    systemPrompt,\n    context,\n    searchResultCount: searchResults.length,\n    hasRelevantContent: searchResults.length > 0\n  }\n}];"
+      },
+      "id": "build-context",
+      "name": "Build RAG Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4"
+            },
+            {
+              "name": "messages",
+              "value": "={{ [\n  {\n    role: 'system',\n    content: $json.systemPrompt\n  },\n  {\n    role: 'user',\n    content: $json.chatInput\n  }\n] }}"
+            },
+            {
+              "name": "max_tokens",
+              "value": 1000
+            },
+            {
+              "name": "temperature",
+              "value": 0.3
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "generate-response",
+      "name": "Generate AI Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format response for chat\nconst aiResponse = $json;\nconst contextData = $('Build RAG Context').item(0).json;\n\nconst responseText = aiResponse.choices[0]?.message?.content || 'Üzgünüm, yanıt oluşturamadım.';\n\n// Add follow-up prompts based on context\nconst followUpPrompts = [];\nif (contextData.hasRelevantContent) {\n  followUpPrompts.push(\n    'Bu konuda daha detaylı bilgi alabilir miyim?',\n    'Başka hangi konularda yardımcı olabilirsiniz?',\n    'Bu bilgiyle ilgili örnek verebilir misiniz?'\n  );\n} else {\n  followUpPrompts.push(\n    'Başka bir konuda yardım edebilir misiniz?',\n    'Size hangi konularda soru sorabilirim?',\n    'Daha spesifik bir soru sorabilir miyim?'\n  );\n}\n\nreturn [{\n  json: {\n    output: responseText,\n    followUpPrompts: followUpPrompts,\n    metadata: {\n      searchResultCount: contextData.searchResultCount,\n      hasRelevantContent: contextData.hasRelevantContent,\n      tokensUsed: aiResponse.usage?.total_tokens || 0,\n      customerId: contextData.customerId,\n      timestamp: contextData.timestamp\n    }\n  }\n}];"
+      },
+      "id": "format-response",
+      "name": "Format Chat Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "jsonOutput": {
+          "output": "={{ $json.output }}",
+          "followUpPrompts": "={{ $json.followUpPrompts }}",
+          "metadata": "={{ $json.metadata }}"
+        }
+      },
+      "id": "respond-to-chat",
+      "name": "Respond to Chat",
+      "type": "n8n-nodes-langchain.respondToChat",
+      "typeVersion": 1,
+      "position": [1780, 300]
+    }
+  ],
+  "connections": {
+    "Chat Trigger": {
+      "main": [[{"node": "Extract Customer Metadata", "type": "main", "index": 0}]]
+    },
+    "Extract Customer Metadata": {
+      "main": [[{"node": "Generate Query Embedding", "type": "main", "index": 0}]]
+    },
+    "Generate Query Embedding": {
+      "main": [[{"node": "Vector Search Documents", "type": "main", "index": 0}]]
+    },
+    "Vector Search Documents": {
+      "main": [[{"node": "Build RAG Context", "type": "main", "index": 0}]]
+    },
+    "Build RAG Context": {
+      "main": [[{"node": "Generate AI Response", "type": "main", "index": 0}]]
+    },
+    "Generate AI Response": {
+      "main": [[{"node": "Format Chat Response", "type": "main", "index": 0}]]
+    },
+    "Format Chat Response": {
+      "main": [[{"node": "Respond to Chat", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": {
+      "enabled": false
+    }
+  },
+  "staticData": {},
+  "tags": [
+    {
+      "createdAt": "2024-12-27T10:00:00.000Z",
+      "updatedAt": "2024-12-27T10:00:00.000Z",
+      "id": "customer-embedding-chat",
+      "name": "Customer Embedding Chat"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-12-27T10:00:00.000Z",
+  "versionId": "1.0"
+}

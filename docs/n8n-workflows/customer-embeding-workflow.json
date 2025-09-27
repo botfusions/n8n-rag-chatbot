@@ -1,0 +1,342 @@
+{
+  "name": "Customer Embedding Document Processing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "embed-document",
+        "options": {
+          "cors": {
+            "allowedOrigins": "*"
+          }
+        }
+      },
+      "id": "document-trigger",
+      "name": "Document Upload Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse document upload request for customer_embeding table\nconst { documentId, customerId, widgetId, filename, fileUrl, fileType, fileContent } = $json;\n\n// Validation\nif (!documentId || !customerId || (!fileUrl && !fileContent)) {\n  throw new Error('Missing required fields: documentId, customerId, and file source');\n}\n\n// Determine processing method\nlet textContent = '';\nif (fileContent) {\n  textContent = fileContent; // Direct text content\n} else {\n  // Will need to fetch from URL\n  textContent = null;\n}\n\nreturn [{\n  json: {\n    documentId,\n    customerId,\n    widgetId: widgetId || null,\n    filename,\n    fileUrl: fileUrl || null,\n    fileType: fileType || 'text/plain',\n    textContent,\n    needsFetch: !fileContent,\n    startTime: Date.now()\n  }\n}];"
+      },
+      "id": "parse-request",
+      "name": "Parse Document Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "needs-fetch",
+              "leftValue": "={{ $json.needsFetch }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ]
+        }
+      },
+      "id": "check-fetch-needed",
+      "name": "Check if Fetch Needed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.fileUrl }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "fetch-document",
+      "name": "Fetch Document from URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract text from fetched document\nconst documentData = $('Parse Document Request').item(0).json;\nlet textContent = '';\n\nif (documentData.needsFetch) {\n  // Get from HTTP request\n  const fetchedData = $json;\n  if (typeof fetchedData === 'string') {\n    textContent = fetchedData;\n  } else if (fetchedData.body) {\n    textContent = fetchedData.body;\n  } else {\n    textContent = JSON.stringify(fetchedData);\n  }\n} else {\n  // Use direct content\n  textContent = documentData.textContent;\n}\n\n// Enhanced text cleaning for Turkish content\ntextContent = textContent\n  .replace(/\\s+/g, ' ')\n  .replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, '')\n  // Fix Turkish character encoding issues\n  .replace(/Ã§/g, 'ç')\n  .replace(/Ä±/g, 'ı')\n  .replace(/Å/g, 'ş')\n  .replace(/Ã¼/g, 'ü')\n  .replace(/Ã¶/g, 'ö')\n  .replace(/Äÿ/g, 'ğ')\n  .trim();\n\nif (!textContent || textContent.length < 10) {\n  throw new Error('Document is empty or too short');\n}\n\nreturn [{\n  json: {\n    ...documentData,\n    textContent,\n    textLength: textContent.length,\n    wordCount: textContent.split(' ').length\n  }\n}];"
+      },
+      "id": "extract-text",
+      "name": "Extract Text Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enhanced chunking with Turkish language support\nconst { textContent, ...documentData } = $json;\n\nconst chunkSize = 1000;\nconst chunkOverlap = 200;\nconst chunks = [];\n\nlet currentPos = 0;\nlet chunkIndex = 0;\n\n// Turkish sentence endings\nconst sentenceEndings = ['.', '!', '?', '…'];\n\nwhile (currentPos < textContent.length) {\n  const chunkEnd = Math.min(currentPos + chunkSize, textContent.length);\n  \n  // Find a good break point (end of sentence or word)\n  let actualEnd = chunkEnd;\n  if (chunkEnd < textContent.length) {\n    // Look for sentence endings first\n    for (let i = chunkEnd; i > currentPos + chunkSize * 0.5; i--) {\n      if (sentenceEndings.includes(textContent[i]) && textContent[i + 1] === ' ') {\n        actualEnd = i + 1;\n        break;\n      }\n    }\n    \n    // If no sentence break, find word break\n    if (actualEnd === chunkEnd) {\n      for (let i = chunkEnd; i > currentPos + chunkSize * 0.7; i--) {\n        if (textContent[i] === ' ') {\n          actualEnd = i;\n          break;\n        }\n      }\n    }\n  }\n  \n  const chunkContent = textContent.slice(currentPos, actualEnd).trim();\n  \n  if (chunkContent.length > 50) {\n    chunks.push({\n      chunkIndex,\n      content: chunkContent,\n      length: chunkContent.length,\n      startPos: currentPos,\n      endPos: actualEnd,\n      wordCount: chunkContent.split(' ').length\n    });\n    chunkIndex++;\n  }\n  \n  // Move to next chunk with overlap\n  currentPos = Math.max(actualEnd - chunkOverlap, currentPos + 100);\n  if (currentPos >= actualEnd) break;\n}\n\nreturn [{\n  json: {\n    ...documentData,\n    chunks,\n    chunkCount: chunks.length,\n    processingStatus: 'chunked'\n  }\n}];"
+      },
+      "id": "chunk-text",
+      "name": "Intelligent Text Chunking",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 3,
+        "options": {}
+      },
+      "id": "batch-chunks",
+      "name": "Batch Chunks for Embedding",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare embedding batch with context\nconst documentData = $('Intelligent Text Chunking').item(0).json;\nconst batchData = $json;\n\nconst currentBatch = documentData.chunks.slice(\n  batchData.index * batchData.batchSize,\n  (batchData.index + 1) * batchData.batchSize\n);\n\n// Prepare texts for embedding with context\nconst textsToEmbed = currentBatch.map(chunk => \n  `Belge: ${documentData.filename}\\nİçerik: ${chunk.content}`\n);\n\nreturn [{\n  json: {\n    ...documentData,\n    currentBatch,\n    textsToEmbed,\n    batchIndex: batchData.index,\n    totalBatches: Math.ceil(documentData.chunks.length / batchData.batchSize)\n  }\n}];"
+      },
+      "id": "prepare-batch",
+      "name": "Prepare Embedding Batch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "text-embedding-ada-002"
+            },
+            {
+              "name": "input",
+              "value": "={{ $json.textsToEmbed }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "generate-embeddings",
+      "name": "Generate OpenAI Embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process embeddings for customer_embeding table\nconst embeddingResponse = $json;\nconst batchData = $('Prepare Embedding Batch').item(0).json;\n\nif (!embeddingResponse.data || !Array.isArray(embeddingResponse.data)) {\n  throw new Error('Invalid embedding response from OpenAI');\n}\n\nconst embeddings = batchData.currentBatch.map((chunk, index) => {\n  const embedding = embeddingResponse.data[index];\n  \n  return {\n    id: `${batchData.documentId}_chunk_${chunk.chunkIndex}`,\n    kind: 'document',\n    question: null,\n    answer: null,\n    text: chunk.content,\n    chunk_index: chunk.chunkIndex,\n    chunk_total: batchData.chunkCount,\n    metadata: {\n      documentId: batchData.documentId,\n      filename: batchData.filename,\n      fileType: batchData.fileType,\n      chunkLength: chunk.length,\n      wordCount: chunk.wordCount,\n      startPos: chunk.startPos,\n      endPos: chunk.endPos,\n      widgetId: batchData.widgetId,\n      processingVersion: '2.0',\n      language: 'tr'\n    },\n    embedding: `[${embedding.embedding.join(',')}]`,\n    embedding_model: 'text-embedding-ada-002',\n    embedding_dim: embedding.embedding.length,\n    customer_id: batchData.customerId,\n    created_at: new Date().toISOString()\n  };\n});\n\nreturn [{\n  json: {\n    embeddings,\n    documentId: batchData.documentId,\n    batchIndex: batchData.batchIndex,\n    totalBatches: batchData.totalBatches,\n    tokensUsed: embeddingResponse.usage?.total_tokens || 0\n  }\n}];"
+      },
+      "id": "process-embeddings",
+      "name": "Format for customer_embeding",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{ $env.SUPABASE_URL }}/rest/v1/customer_embeding",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "{{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "",
+              "value": "={{ $json.embeddings }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "store-embeddings",
+      "name": "Store in customer_embeding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2440, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-last-batch",
+              "leftValue": "={{ $('Format for customer_embeding').item(0).json.batchIndex + 1 }}",
+              "rightValue": "={{ $('Format for customer_embeding').item(0).json.totalBatches }}",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "check-completion",
+      "name": "Check if Last Batch",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2660, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{ $env.SUPABASE_URL }}/rest/v1/customer_embeding",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "{{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "",
+              "value": "={{ [{\n  id: `${$('Format for customer_embeding').item(0).json.documentId}_completed`,\n  kind: 'document_status',\n  question: null,\n  answer: null,\n  text: `Processing completed: ${$('Intelligent Text Chunking').item(0).json.chunkCount} chunks created`,\n  chunk_index: null,\n  chunk_total: $('Intelligent Text Chunking').item(0).json.chunkCount,\n  metadata: {\n    documentId: $('Format for customer_embeding').item(0).json.documentId,\n    status: 'completed',\n    totalChunks: $('Intelligent Text Chunking').item(0).json.chunkCount,\n    completedAt: new Date().toISOString(),\n    processingVersion: '2.0'\n  },\n  embedding: null,\n  embedding_model: null,\n  embedding_dim: null,\n  customer_id: $('Parse Document Request').item(0).json.customerId,\n  created_at: new Date().toISOString()\n}] }}"
+            }
+          ]
+        }
+      },
+      "id": "mark-completed",
+      "name": "Mark Processing Complete",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2880, 200]
+    }
+  ],
+  "connections": {
+    "Document Upload Trigger": {
+      "main": [[{"node": "Parse Document Request", "type": "main", "index": 0}]]
+    },
+    "Parse Document Request": {
+      "main": [[{"node": "Check if Fetch Needed", "type": "main", "index": 0}]]
+    },
+    "Check if Fetch Needed": {
+      "main": [
+        [{"node": "Fetch Document from URL", "type": "main", "index": 0}],
+        [{"node": "Extract Text Content", "type": "main", "index": 0}]
+      ]
+    },
+    "Fetch Document from URL": {
+      "main": [[{"node": "Extract Text Content", "type": "main", "index": 0}]]
+    },
+    "Extract Text Content": {
+      "main": [[{"node": "Intelligent Text Chunking", "type": "main", "index": 0}]]
+    },
+    "Intelligent Text Chunking": {
+      "main": [[{"node": "Batch Chunks for Embedding", "type": "main", "index": 0}]]
+    },
+    "Batch Chunks for Embedding": {
+      "main": [[{"node": "Prepare Embedding Batch", "type": "main", "index": 0}]]
+    },
+    "Prepare Embedding Batch": {
+      "main": [[{"node": "Generate OpenAI Embeddings", "type": "main", "index": 0}]]
+    },
+    "Generate OpenAI Embeddings": {
+      "main": [[{"node": "Format for customer_embeding", "type": "main", "index": 0}]]
+    },
+    "Format for customer_embeding": {
+      "main": [[{"node": "Store in customer_embeding", "type": "main", "index": 0}]]
+    },
+    "Store in customer_embeding": {
+      "main": [[{"node": "Check if Last Batch", "type": "main", "index": 0}]]
+    },
+    "Check if Last Batch": {
+      "main": [
+        [{"node": "Mark Processing Complete", "type": "main", "index": 0}],
+        [{"node": "Batch Chunks for Embedding", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": {
+      "enabled": false
+    }
+  },
+  "staticData": {},
+  "tags": [
+    {
+      "createdAt": "2024-12-27T10:00:00.000Z",
+      "updatedAt": "2024-12-27T10:00:00.000Z",
+      "id": "customer-embedding",
+      "name": "Customer Embedding"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-12-27T10:00:00.000Z",
+  "versionId": "1.0"
+}

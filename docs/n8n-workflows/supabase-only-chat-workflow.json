@@ -1,5 +1,5 @@
 {
-  "name": "Supabase Only Chat Workflow (Backend API Olmadan)",
+  "name": "RAG Chat Supabase Simple",
   "nodes": [
     {
       "parameters": {
