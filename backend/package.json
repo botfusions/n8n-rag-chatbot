@@ -1,7 +1,7 @@
 {
-  "name": "n8n-rag-backend",
+  "name": "talksfusion-backend",
   "version": "1.0.0",
-  "description": "N8N RAG Chat Dashboard Backend API",
+  "description": "TalksFusion Backend API - AI-powered RAG chatbot platform",
   "main": "dist/app.js",
   "scripts": {
     "dev": "nodemon src/app.ts",
@@ -15,13 +15,15 @@
   "keywords": [
     "express",
     "typescript",
-    "n8n",
+    "talksfusion",
+    "botfusions",
     "rag",
     "supabase",
     "openai",
-    "vector-search"
+    "vector-search",
+    "chatbot"
   ],
-  "author": "N8N RAG Team",
+  "author": "TalksFusion Team",
   "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.38.4",

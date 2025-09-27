@@ -99,6 +99,7 @@ plugins:
   - name: cors
     config:
       origins:
+        - https://talksfusion.com
         - http://localhost:3000
         - http://localhost:8000
         - https://supabase.turklawai.com

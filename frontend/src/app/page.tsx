@@ -25,7 +25,7 @@ export default function HomePage() {
           <nav className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <MessageSquare className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold">N8N RAG</span>
+              <span className="text-2xl font-bold">TalksFusion</span>
             </div>
             <div className="hidden md:flex items-center space-x-6">
               <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -208,7 +208,7 @@ export default function HomePage() {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <MessageSquare className="h-6 w-6 text-primary" />
-                <span className="text-lg font-bold">N8N RAG</span>
+                <span className="text-lg font-bold">TalksFusion</span>
               </div>
               <p className="text-muted-foreground">
                 Akıllı chatbot çözümleri ile müşteri deneyiminizi geliştirin.
@@ -240,7 +240,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="border-t mt-8 pt-8 text-center text-muted-foreground">
-            <p>&copy; 2024 N8N RAG Chatbot. Tüm hakları saklıdır.</p>
+            <p>&copy; 2024 BotFusions. Tüm hakları saklıdır. TalksFusion is a BotFusions product.</p>
           </div>
         </div>
       </footer>

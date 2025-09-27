@@ -7,24 +7,24 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'N8N RAG Chatbot - Smart Customer Service Solution',
-  description: 'Create intelligent chatbots powered by RAG technology. Provide instant, accurate responses to your customers 24/7.',
-  keywords: ['chatbot', 'ai', 'customer service', 'rag', 'artificial intelligence'],
-  authors: [{ name: 'N8N RAG Team' }],
-  creator: 'N8N RAG',
-  publisher: 'N8N RAG',
+  title: 'TalksFusion - AI-Powered RAG Chatbot Platform | BotFusions',
+  description: 'BotFusions TalksFusion ile akıllı chatbot\'lar oluşturun. RAG teknolojisi ile güçlendirilmiş conversational AI platform.',
+  keywords: ['chatbot', 'ai', 'customer service', 'rag', 'artificial intelligence', 'botfusions', 'talksfusion'],
+  authors: [{ name: 'BotFusions Team' }],
+  creator: 'BotFusions',
+  publisher: 'BotFusions',
   openGraph: {
     type: 'website',
     locale: 'tr_TR',
-    url: 'https://n8n-rag-chatbot.com',
-    title: 'N8N RAG Chatbot - Smart Customer Service Solution',
-    description: 'Create intelligent chatbots powered by RAG technology. Provide instant, accurate responses to your customers 24/7.',
-    siteName: 'N8N RAG Chatbot',
+    url: 'https://talksfusion.com',
+    title: 'TalksFusion - AI Chatbot Platform | BotFusions',
+    description: 'BotFusions TalksFusion ile akıllı chatbot\'lar oluşturun. RAG teknolojisi ile güçlendirilmiş conversational AI platform.',
+    siteName: 'BotFusions',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'N8N RAG Chatbot - Smart Customer Service Solution',
-    description: 'Create intelligent chatbots powered by RAG technology. Provide instant, accurate responses to your customers 24/7.',
+    title: 'TalksFusion - AI Chatbot Platform | BotFusions',
+    description: 'BotFusions TalksFusion ile akıllı chatbot\'lar oluşturun. RAG teknolojisi ile güçlendirilmiş conversational AI platform.',
   },
   robots: {
     index: true,

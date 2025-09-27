@@ -146,19 +146,23 @@ class App {
     // Root endpoint
     this.app.get('/', (req, res) => {
       ResponseHandler.success(res, {
-        name: 'N8N RAG Backend API',
+        name: 'TalksFusion API',
+        product: 'TalksFusion',
         version: '1.0.0',
         status: 'healthy',
         timestamp: new Date().toISOString(),
         environment: appConfig.env,
-      }, 'API is running successfully');
+        website: 'https://talksfusion.com'
+      }, 'TalksFusion API is running successfully');
     });
 
     // API documentation endpoint
     this.app.get('/api', (req, res) => {
       ResponseHandler.success(res, {
-        name: 'N8N RAG Backend API',
+        name: 'TalksFusion API',
+        product: 'TalksFusion',
         version: '1.0.0',
+        description: 'AI-powered RAG chatbot platform',
         endpoints: {
           auth: '/api/auth',
           documents: '/api/documents',
@@ -170,6 +174,7 @@ class App {
         },
         documentation: '/api/docs',
         health: '/health',
+        website: 'https://talksfusion.com'
       });
     });
 

@@ -13,12 +13,15 @@
 
 ```yaml
 Application Type: Web application
-Name: N8N RAG Chatbot
+Name: TalksFusion RAG Chatbot
 Authorized JavaScript origins:
-  - https://your-domain.com
+  - https://talksfusion.com
   - http://localhost:3000
+  - http://localhost:8000
 Authorized redirect URIs:
-  - https://your-supabase-domain.com/auth/v1/callback
+  - https://supabase.turklawai.com/auth/v1/callback
+  - https://talksfusion.com/auth/v1/callback
+  - http://localhost:8000/auth/v1/callback
   - http://localhost:54321/auth/v1/callback
 ```
 
@@ -42,13 +45,13 @@ GOTRUE_EXTERNAL_GOOGLE_SECRET=your_google_client_secret
 GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://your-supabase-domain.com/auth/v1/callback
 
 # Site URL (frontend domain)
-GOTRUE_SITE_URL=https://your-frontend-domain.com
-GOTRUE_URI_ALLOW_LIST=https://your-frontend-domain.com,http://localhost:3000
+GOTRUE_SITE_URL=https://talksfusion.com
+GOTRUE_URI_ALLOW_LIST=https://talksfusion.com,http://localhost:3000
 
 # Additional Auth Settings
 GOTRUE_DISABLE_SIGNUP=false
-GOTRUE_EMAIL_CONFIRM_URL=https://your-frontend-domain.com/auth/confirm
-GOTRUE_PASSWORD_RESET_URL=https://your-frontend-domain.com/auth/reset
+GOTRUE_EMAIL_CONFIRM_URL=https://talksfusion.com/auth/confirm
+GOTRUE_PASSWORD_RESET_URL=https://talksfusion.com/auth/reset
 ```
 
 ### Docker Compose Service Update

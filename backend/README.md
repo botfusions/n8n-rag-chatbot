@@ -1,6 +1,6 @@
-# N8N RAG Backend API
+# TalksFusion Backend API
 
-A production-ready Express.js backend for the N8N RAG Chat Dashboard with TypeScript, Supabase, and OpenAI integration.
+A production-ready Express.js backend for TalksFusion - AI-powered RAG chatbot platform.
 
 ## 🚀 Features
 
