@@ -1,0 +1,81 @@
+{
+  "name": "Simple Webhook Chat (No RAG)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simple-chat",
+        "responseMode": "responseNode"
+      },
+      "id": "simple-webhook-trigger",
+      "name": "Simple Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "simple-chat"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simple chat processing\nconst body = $json.body || $json;\nconst chatInput = body.chatInput || body.message;\nconst metadata = body.metadata || {};\n\nif (!chatInput) {\n  return [{ json: { error: 'chatInput is required' } }];\n}\n\n// Simple response without RAG\nconst responses = [\n  'Merhaba! Size nasıl yardımcı olabilirim?',\n  'Sorunuzu anlıyorum. Detaylı bilgi için uzmanlarımızla iletişime geçebilirsiniz.',\n  'Bu konuda size yardımcı olmaya çalışacağım.',\n  'Başka bir sorunuz var mı?'\n];\n\nconst randomResponse = responses[Math.floor(Math.random() * responses.length)];\n\nreturn [{\n  json: {\n    output: randomResponse,\n    followUpPrompts: [\n      'Daha fazla bilgi istiyorum',\n      'Başka sorularım var',\n      'İletişim bilgilerini istiyorum'\n    ],\n    metadata: {\n      responseType: 'simple-webhook',\n      timestamp: new Date().toISOString(),\n      success: true\n    }\n  }\n}];"
+      },
+      "id": "simple-chat-processing",
+      "name": "Simple Chat Processing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "simple-webhook-response",
+      "name": "Simple Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Simple Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Simple Chat Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Chat Processing": {
+      "main": [
+        [
+          {
+            "node": "Simple Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "staticData": {},
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-09-29T15:17:43.100Z",
+  "versionId": "1.0"
+}

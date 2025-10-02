@@ -272,7 +272,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
           <p className="text-muted-foreground mt-2">
-            {t('dashboard.welcome')}, chatbot'larınızı yönetin ve performanslarını takip edin.
+            {t('dashboard.welcome')}, chatbot&apos;larınızı yönetin ve performanslarını takip edin.
           </p>
         </div>
       </div>

@@ -33,13 +33,14 @@ export default function AuthCallback() {
 
           // Create or update customer record
           const { data: customer, error: customerError } = await supabase
-            .from('customers')
+            .from('profiles')
             .upsert({
               id: data.session.user.id,
-              email: data.session.user.email,
+              email: data.session.user.email || '',
               full_name: data.session.user.user_metadata?.full_name || '',
               avatar_url: data.session.user.user_metadata?.avatar_url || '',
-              provider: data.session.user.app_metadata?.provider || 'google',
+              role: 'user' as const,
+              is_active: true,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             }, {

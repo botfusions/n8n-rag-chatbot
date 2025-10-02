@@ -26,3 +26,6 @@ export const createServerClient = () => {
     }
   })
 }
+
+// Alias for backward compatibility
+export const createClientSupabase = () => supabase

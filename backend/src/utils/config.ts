@@ -65,6 +65,8 @@ export const appConfig: AppConfig = {
   n8n: {
     webhookBaseUrl: getEnvVar('N8N_WEBHOOK_BASE_URL', 'http://localhost:5678/webhook'),
     apiKey: getEnvVar('N8N_API_KEY', ''),
+    chatWebhookUrl: getEnvVar('N8N_CHAT_WEBHOOK_URL', ''),
+    embeddingWebhookUrl: getEnvVar('N8N_EMBEDDING_WEBHOOK_URL', ''),
   },
 
   security: {

@@ -17,6 +17,7 @@ import searchRoutes from './routes/search';
 import analyticsRoutes from './routes/analytics';
 import webhookRoutes from './routes/webhooks';
 import adminRoutes from './routes/admin';
+import embeddingRoutes from './routes/embeddings';
 
 class App {
   public app: express.Application;
@@ -117,11 +118,11 @@ class App {
 
     // Request metadata middleware
     this.app.use((req, res, next) => {
-      req.requestTime = new Date().toISOString();
-      req.requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      (req as any).requestTime = new Date().toISOString();
+      (req as any).requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       // Add request ID to response headers
-      res.set('X-Request-ID', req.requestId);
+      res.set('X-Request-ID', (req as any).requestId);
 
       next();
     });
@@ -142,6 +143,7 @@ class App {
     this.app.use('/api/analytics', analyticsRoutes);
     this.app.use('/api/webhooks', webhookRoutes);
     this.app.use('/api/admin', adminRoutes);
+    this.app.use('/api/embeddings', embeddingRoutes);
 
     // Root endpoint
     this.app.get('/', (req, res) => {

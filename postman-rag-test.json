@@ -1,0 +1,231 @@
+{
+  "info": {
+    "name": "RAG Chat Test Collection",
+    "description": "N8N RAG Chat Webhook Test Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "RAG Chat - Basic Test",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "User-Agent",
+            "value": "Postman-RAG-Test/1.0",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"chatInput\": \"Merhaba, şirket hakkında bilgi alabilir miyim?\",\n  \"sessionId\": \"postman-test-{{$timestamp}}\",\n  \"metadata\": {\n    \"customerId\": \"test-customer-rag\",\n    \"widgetId\": \"test-widget-rag\",\n    \"companyName\": \"Test Company RAG\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://n8n.botfusions.com/webhook/4012a383-9085-4ecb-801a-c879848d6b40",
+          "protocol": "https",
+          "host": [
+            "n8n",
+            "botfusions",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "4012a383-9085-4ecb-801a-c879848d6b40"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RAG Chat - Company Question",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "User-Agent",
+            "value": "Postman-RAG-Test/1.0",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"chatInput\": \"Şirket ne zaman kuruldu?\",\n  \"sessionId\": \"postman-company-{{$timestamp}}\",\n  \"metadata\": {\n    \"customerId\": \"test-customer-rag\",\n    \"widgetId\": \"test-widget-rag\",\n    \"companyName\": \"Test Company RAG\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://n8n.botfusions.com/webhook/4012a383-9085-4ecb-801a-c879848d6b40",
+          "protocol": "https",
+          "host": [
+            "n8n",
+            "botfusions",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "4012a383-9085-4ecb-801a-c879848d6b40"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RAG Chat - Support Hours",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "User-Agent",
+            "value": "Postman-RAG-Test/1.0",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"chatInput\": \"Destek saatleriniz nedir?\",\n  \"sessionId\": \"postman-support-{{$timestamp}}\",\n  \"metadata\": {\n    \"customerId\": \"test-customer-rag\",\n    \"widgetId\": \"test-widget-rag\",\n    \"companyName\": \"Test Company RAG\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://n8n.botfusions.com/webhook/4012a383-9085-4ecb-801a-c879848d6b40",
+          "protocol": "https",
+          "host": [
+            "n8n",
+            "botfusions",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "4012a383-9085-4ecb-801a-c879848d6b40"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RAG Chat - General Question",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "User-Agent",
+            "value": "Postman-RAG-Test/1.0",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"chatInput\": \"Hangi hizmetleri sunuyorsunuz?\",\n  \"sessionId\": \"postman-services-{{$timestamp}}\",\n  \"metadata\": {\n    \"customerId\": \"test-customer-rag\",\n    \"widgetId\": \"test-widget-rag\",\n    \"companyName\": \"Test Company RAG\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://n8n.botfusions.com/webhook/4012a383-9085-4ecb-801a-c879848d6b40",
+          "protocol": "https",
+          "host": [
+            "n8n",
+            "botfusions",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "4012a383-9085-4ecb-801a-c879848d6b40"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Simple Chat Comparison",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "User-Agent",
+            "value": "Postman-Simple-Test/1.0",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"chatInput\": \"Merhaba simple chat\",\n  \"metadata\": {\n    \"customerId\": \"test-customer\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://n8n.botfusions.com/webhook/simple-chat",
+          "protocol": "https",
+          "host": [
+            "n8n",
+            "botfusions",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "simple-chat"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "rag_webhook_url",
+      "value": "https://n8n.botfusions.com/webhook/4012a383-9085-4ecb-801a-c879848d6b40",
+      "type": "string"
+    },
+    {
+      "key": "simple_webhook_url",
+      "value": "https://n8n.botfusions.com/webhook/simple-chat",
+      "type": "string"
+    },
+    {
+      "key": "test_customer_id",
+      "value": "test-customer-rag",
+      "type": "string"
+    }
+  ]
+}

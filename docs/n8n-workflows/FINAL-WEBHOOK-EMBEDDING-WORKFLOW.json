@@ -1,0 +1,163 @@
+{
+  "name": "Document Embedding → customer_embeding (Webhook)",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "embedding-upload",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [48, 192],
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "webhookId": "embedding-upload"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Webhook'tan customer bilgilerini al\nconst body = $input.item.json.body || {};\nconst CUSTOMER_ID = body.customer_id || 'demo-customer-001';\nconst CUSTOMER_NAME = body.customer_name || 'Demo Şirketi A.Ş.';\nconst CUSTOMER_EMAIL = body.customer_email || 'demo@talksfusion.com';\n\nif (!CUSTOMER_ID?.trim()) {\n  throw new Error('customer_id boş olamaz');\n}\n\nreturn [{\n  json: {\n    customer_id: CUSTOMER_ID,
+    customer_name: CUSTOMER_NAME,\n    customer_email: CUSTOMER_EMAIL,\n    fileId: body.fileId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [288, 192],
+      "id": "customer-info",
+      "name": "Customer Bilgi"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.fileId }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [512, 192],
+      "id": "google-drive",
+      "name": "Download File from Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "f4pLwD17RnohJOxG",
+          "name": "Botfusions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const ENDPOINT = 'https://unstructured.turklawai.com/general/v0/general';\nconst API_KEY = 'Y3CLuxVY9gVakedQwswGxsAMy8LoC7TE';\n\nconst bin = $input.item?.binary?.data;\nif (!bin?.data) {\n  throw new Error('Binary data yok');\n}\n\nconst fileBuf = Buffer.from(bin.data, 'base64');\nconst fileName = bin.fileName || 'document.pdf';\nconst contentType = bin.mimeType || 'application/octet-stream';\n\nconst boundary = '----n8n-' + Math.random().toString(16).slice(2);\nconst CRLF = '\\r\\n';\nconst parts = [];\n\nconst pushText = (name, value) => {\n  parts.push(Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name=\"${name}\"${CRLF}${CRLF}${value}${CRLF}`));\n};\n\nparts.push(Buffer.from(`--${boundary}${CRLF}`));\nparts.push(Buffer.from(`Content-Disposition: form-data; name=\"files\"; filename=\"${fileName}\"${CRLF}`));\nparts.push(Buffer.from(`Content-Type: ${contentType}${CRLF}${CRLF}`));\nparts.push(fileBuf);\nparts.push(Buffer.from(CRLF));\n\npushText('strategy', 'auto');\npushText('coordinates', 'true');\npushText('split_documents', 'false');\n\nparts.push(Buffer.from(`--${boundary}--${CRLF}`));\nconst body = Buffer.concat(parts);\n\nconst res = await this.helpers.httpRequest({\n  method: 'POST',\n  url: ENDPOINT,\n  headers: {\n    'unstructured-api-key': String(API_KEY).trim(),\n    'Accept': 'application/json',\n    'Content-Type': `multipart/form-data; boundary=${boundary}`,\n    'Content-Length': body.length,\n  },\n  body,\n});\n\nlet out = res;\nif (typeof out === 'string') {\n  try { out = JSON.parse(out); } catch { out = { raw: out }; }\n} else if (Buffer.isBuffer?.(out)) {\n  out = { raw: out.toString('utf8') };\n}\nif (Array.isArray(out)) {\n  out = { elements: out, filename: fileName };\n}\n\nreturn { json: out };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [736, 192],
+      "id": "unstructured",
+      "name": "Unstructured API"
+    },
+    {
+      "parameters": {
+        "jsCode": "const elements = $input.first().json.elements || [];\nreturn elements.map(e => ({ json: e }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [944, 192],
+      "id": "parse-elements",
+      "name": "Parse Elements"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nlet els;\n\nif (items.length === 1 && Array.isArray(items[0].json.elements)) {\n  els = items[0].json.elements;\n} else {\n  els = items.map(i => i.json);\n}\n\nconst out = [];\nlet cur = null;\n\nfor (const e of els) {\n  const t = String(e.text || '').trim();\n  if (!t) continue;\n\n  if (/^Q[:\\-]/i.test(t)) {\n    if (cur) out.push(cur);\n    cur = { question: t.replace(/^Q[:\\-]\\s*/i, ''), answer: '' };\n  } else if (/^A[:\\-]/i.test(t)) {\n    if (cur) {\n      cur.answer = t.replace(/^A[:\\-]\\s*/i, '');\n      out.push(cur);\n      cur = null;\n    }\n  }\n}\n\nif (cur) out.push(cur);\n\nreturn out.length > 0 ? out.map(x => ({ json: x })) : [];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1168, 192],
+      "id": "qa-extract",
+      "name": "Q/A Extract"
+    },
+    {
+      "parameters": {
+        "jsCode": "const MAX_CHARS = 1800;\nconst OVERLAP = 200;\n\nfunction fnv1a32(str, seed = 0x811c9dc5) {\n  let h = seed >>> 0;\n  for (let i = 0; i < str.length; i++) {\n    h ^= str.charCodeAt(i);\n    h = (h + (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24)) >>> 0;\n  }\n  return h >>> 0;\n}\n\nfunction fnv1a64Hex(str) {\n  const h1 = fnv1a32(str, 0x811c9dc5);\n  const h2 = fnv1a32(str + '|salt', 0x811c9dc5 ^ 0xABCDEF01);\n  return h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0');\n}\n\nconst norm = s => String(s || '').trim().replace(/\\s+/g, ' ');\nconst hashQA = (q, a) => fnv1a64Hex(norm(q) + '\\n' + norm(a));\nconst hashText = (t) => fnv1a64Hex(norm(t));\n\nfunction splitSentences(s) {\n  return String(s).split(/(?<=[\\.!?…])\\s+/);\n}\n\nfunction chunkText(text, maxChars = MAX_CHARS, overlap = OVERLAP) {\n  const sents = splitSentences(text);\n  const chunks = [];\n  let buf = '';\n  let lastBreak = 0;\n\n  for (let i = 0; i < sents.length; i++) {\n    const next = buf ? buf + ' ' + sents[i] : sents[i];\n    if (next.length <= maxChars) {\n      buf = next;\n      continue;\n    }\n\n    if (buf) chunks.push(buf.trim());\n\n    let back = '';\n    for (let j = i - 1; j >= lastBreak && back.length < overlap; j--) {\n      back = sents[j] + ' ' + back;\n    }\n    buf = (back + sents[i]).trim();\n    lastBreak = i;\n  }\n  \n  if (buf) chunks.push(buf.trim());\n  return chunks.length ? chunks : [text.slice(0, maxChars)];\n}\n\nconst isHeading = t => /^(Title|Header|Heading|SectionHeader|H[1-6])$/i.test(String(t || ''));\n\nconst items = $input.all();\nconst looksLikeQA = items.some(it => it.json && (it.json.question || it.json.answer));\nconst filename = items[0]?.json?.filename || 'unknown.pdf';\n\nif (looksLikeQA) {\n  const out = [];\n  items.forEach((it) => {\n    const q = (it.json.question || '').trim();\n    const a = (it.json.answer || '').trim();\n    const base = q && a ? `Q: ${q}\\nA: ${a}` : (q || a);\n    if (!base) return;\n\n    const pairId = hashQA(q, a);\n    const chunks = base.length > MAX_CHARS ? chunkText(base) : [base];\n    const meta = { filename, source: 'qa', ...it.json.metadata };\n\n    chunks.forEach((text, ci) => {\n      out.push({\n        json: {\n          id: `${pairId}-${ci}`,\n          kind: 'qa',\n          text,\n          question: q || null,\n          answer: a || null,\n          chunk_index: ci,\n          chunk_total: chunks.length,\n          metadata: meta,\n        },\n      });\n    });\n  });\n  return out;\n}\n\nlet elements;\nif (items.length === 1 && Array.isArray(items[0].json.elements)) {\n  elements = items[0].json.elements;\n} else if (items.length === 1 && typeof items[0].json.text === 'string') {\n  elements = [{ text: items[0].json.text, type: 'Document' }];\n} else {\n  elements = items.map(i => i.json);\n}\n\nconst out = [];\nlet sectionTitle = null;\nlet buffer = '';\nlet ids = [];\n\nfunction flush() {\n  const content = buffer.trim();\n  if (!content) {\n    buffer = '';\n    ids = [];\n    return;\n  }\n\n  const base = sectionTitle ? `${sectionTitle}\\n\\n${content}` : content;\n  const chunks = base.length > MAX_CHARS ? chunkText(base) : [base];\n\n  chunks.forEach((text, ci) => {\n    const chunkId = hashText(text);\n    out.push({\n      json: {\n        id: `${chunkId}-${ci}`,\n        kind: 'document',\n        title: sectionTitle || null,\n        text,\n        question: null,\n        answer: null,\n        chunk_index: ci,\n        chunk_total: chunks.length,\n        metadata: { filename, source: 'document', element_ids: ids.slice() },\n      },\n    });\n  });\n\n  buffer = '';\n  ids = [];\n}\n\nfor (const e of elements || []) {\n  const t = String(e.text || '').trim();\n  const typ = e.type || '';\n\n  if (isHeading(typ)) {\n    flush();\n    sectionTitle = t || sectionTitle;\n    continue;\n  }\n  \n  if (!t) continue;\n\n  const candidate = buffer ? buffer + '\\n' + t : t;\n  if (candidate.length > MAX_CHARS) {\n    flush();\n    buffer = t;\n    ids = e.element_id ? [e.element_id] : [];\n  } else {\n    buffer = candidate;\n    if (e.element_id) ids.push(e.element_id);\n  }\n}\n\nflush();\n\nreturn out.length ? out : [{ json: { id: 'empty', kind: 'empty', text: 'No content', metadata: {} } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1392, 192],
+      "id": "chunk-gen",
+      "name": "Chunk Generation"
+    },
+    {
+      "parameters": {
+        "jsCode": "const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY_HERE';\nconst MODEL = 'text-embedding-3-small';\nconst BATCH_SIZE = 64;\nconst API_URL = 'https://api.openai.com/v1/embeddings';\n\nconst sleep = ms => new Promise(r => setTimeout(r, ms));\n\nasync function embedBatch(inputs) {\n  const body = { model: MODEL, input: inputs, encoding_format: 'float' };\n  const options = {\n    method: 'POST',\n    uri: API_URL,\n    headers: {\n      Authorization: `Bearer ${OPENAI_API_KEY}`,\n      'Content-Type': 'application/json',\n    },\n    body,\n    json: true,\n  };\n\n  const maxRetries = 4;\n  let attempt = 0;\n  \n  while (true) {\n    try {\n      const res = await this.helpers.request(options);\n      if (!res?.data || !Array.isArray(res.data)) {\n        throw new Error('Unexpected OpenAI response');\n      }\n      return res.data.map(d => d.embedding);\n    } catch (e) {\n      const status = e.statusCode || e.response?.statusCode;\n      if ((status === 429 || status >= 500) && attempt < maxRetries) {\n        await sleep(Math.min(2000 * (2 ** attempt), 12000));\n        attempt++;\n        continue;\n      }\n      throw new Error(`OpenAI embeddings failed (${status}): ${e.message}`);\n    }\n  }\n}\n\nconst items = $input.all();\nconst out = items.map(i => ({ json: { ...i.json } }));\n\nconst todo = [];\nfor (let idx = 0; idx < items.length; idx++) {\n  const j = items[idx].json || {};\n  const txt = String(j.text || '').trim();\n  if (!txt) continue;\n  todo.push({ idx, id: j.id, text: txt });\n}\n\nif (todo.length === 0) return out;\n\nfor (let i = 0; i < todo.length; i += BATCH_SIZE) {\n  const batch = todo.slice(i, i + BATCH_SIZE);\n  const inputs = batch.map(b => b.text);\n  const embeddings = await embedBatch.call(this, inputs);\n\n  batch.forEach((b, k) => {\n    const emb = embeddings[k];\n    out[b.idx].json.embedding = emb;\n    out[b.idx].json.embedding_dim = Array.isArray(emb) ? emb.length : 1536;\n  });\n}\n\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1616, 192],
+      "id": "embeddings",
+      "name": "OpenAI Embeddings"
+    },
+    {
+      "parameters": {
+        "jsCode": "const customerNode = $('Customer Bilgi').first();\nconst customerId = customerNode.json.customer_id;\n\nreturn $input.all().map(i => {\n  const j = i.json;\n  return {\n    json: {\n      id: j.id,\n      customer_id: customerId,\n      kind: j.kind || 'document',\n      text: j.text,\n      question: j.question || null,\n      answer: j.answer || null,\n      embedding: j.embedding,\n      embedding_dim: j.embedding_dim || 1536,\n      metadata: j.metadata || {},\n      chunk_index: j.chunk_index || 0,\n      chunk_total: j.chunk_total || 1,\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1824, 192],
+      "id": "format",
+      "name": "Format for customer_embeding"
+    },
+    {
+      "parameters": {
+        "url": "https://supabase.turklawai.com/rest/v1/customer_embeding",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "apikey", "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc1OTA3MDIyMCwiZXhwIjo0OTE0NzQzODIwLCJyb2xlIjoiYW5vbiJ9.GhyoDRoTItfuiUtOWQD82zjras_rWUzChVK9bFJ1FMA"},
+            {"name": "Authorization", "value": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc1OTA3MDIyMCwiZXhwIjo0OTE0NzQzODIwLCJyb2xlIjoic2VydmljZV9yb2xlIn0.t3BEs734PAKmxVp0qAPr-xNUgJLS44RKIO7DTSGWpGc"},
+            {"name": "Prefer", "value": "resolution=merge-duplicates"}
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($input.all().map(i => ({ id: i.json.id, customer_id: i.json.customer_id, kind: i.json.kind, text: i.json.text, question: i.json.question, answer: i.json.answer, embedding: i.json.embedding, embedding_dim: i.json.embedding_dim, metadata: i.json.metadata, chunk_index: i.json.chunk_index, chunk_total: i.json.chunk_total }))) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2048, 192],
+      "id": "insert",
+      "name": "Insert to customer_embeding",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, chunks_created: $input.all().length, customer_id: $('Customer Bilgi').first().json.customer_id }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [2272, 192],
+      "id": "respond",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {"main": [[{"node": "Customer Bilgi", "type": "main", "index": 0}]]},
+    "Customer Bilgi": {"main": [[{"node": "Download File from Google Drive", "type": "main", "index": 0}]]},
+    "Download File from Google Drive": {"main": [[{"node": "Unstructured API", "type": "main", "index": 0}]]},
+    "Unstructured API": {"main": [[{"node": "Parse Elements", "type": "main", "index": 0}]]},
+    "Parse Elements": {"main": [[{"node": "Q/A Extract", "type": "main", "index": 0}]]},
+    "Q/A Extract": {"main": [[{"node": "Chunk Generation", "type": "main", "index": 0}]]},
+    "Chunk Generation": {"main": [[{"node": "OpenAI Embeddings", "type": "main", "index": 0}]]},
+    "OpenAI Embeddings": {"main": [[{"node": "Format for customer_embeding", "type": "main", "index": 0}]]},
+    "Format for customer_embeding": {"main": [[{"node": "Insert to customer_embeding", "type": "main", "index": 0}]]},
+    "Insert to customer_embeding": {"main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"}
+}

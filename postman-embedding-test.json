@@ -1,0 +1,206 @@
+{
+  "info": {
+    "name": "N8N Embedding Workflow Tests",
+    "description": "customer_embeding tablosu için embedding workflow testleri",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "embedding-workflow-tests-001",
+    "version": "1.0.0"
+  },
+  "item": [
+    {
+      "name": "Test 1: Minimal - Google Drive File",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fileId\": \"GOOGLE_DRIVE_FILE_ID_BURAYA\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://n8n.botfusions.com/webhook/embedding-upload",
+          "protocol": "https",
+          "host": ["n8n", "botfusions", "com"],
+          "path": ["webhook", "embedding-upload"]
+        },
+        "description": "En basit test: Sadece Google Drive file ID ile"
+      },
+      "response": []
+    },
+    {
+      "name": "Test 2: Full Metadata",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fileId\": \"1AbCdEfGhIjKlMnOpQrStUvWxYz123456\",\n  \"filename\": \"sirket-katalog.pdf\",\n  \"metadata\": {\n    \"source\": \"postman-test\",\n    \"uploaded_by\": \"admin\",\n    \"category\": \"company-documents\",\n    \"department\": \"sales\",\n    \"language\": \"tr\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://n8n.botfusions.com/webhook/embedding-upload",
+          "protocol": "https",
+          "host": ["n8n", "botfusions", "com"],
+          "path": ["webhook", "embedding-upload"]
+        },
+        "description": "Tam metadata ile test - tüm opsiyonel alanlar dahil"
+      },
+      "response": []
+    },
+    {
+      "name": "Test 3: URL'den Dosya İndir",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fileUrl\": \"https://example.com/sample-document.pdf\",\n  \"filename\": \"sample-document.pdf\",\n  \"metadata\": {\n    \"source\": \"url-download\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://n8n.botfusions.com/webhook/embedding-upload",
+          "protocol": "https",
+          "host": ["n8n", "botfusions", "com"],
+          "path": ["webhook", "embedding-upload"]
+        },
+        "description": "Google Drive yerine direkt URL'den dosya indirme\n\nNOT: Bu test için Google Drive node'unu HTTP Request node ile değiştirmeniz gerekir"
+      },
+      "response": []
+    },
+    {
+      "name": "Test 4: Q&A Format Document",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fileId\": \"GOOGLE_DRIVE_FILE_ID_QA_FORMAT\",\n  \"filename\": \"sss-sorular.pdf\",\n  \"metadata\": {\n    \"source\": \"faq\",\n    \"content_type\": \"qa\",\n    \"language\": \"tr\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://n8n.botfusions.com/webhook/embedding-upload",
+          "protocol": "https",
+          "host": ["n8n", "botfusions", "com"],
+          "path": ["webhook", "embedding-upload"]
+        },
+        "description": "Q: / A: formatındaki dokümanlı test\n\nDokümanda şu format olmalı:\nQ: Soru burada?\nA: Cevap burada."
+      },
+      "response": []
+    },
+    {
+      "name": "Test 5: Large Document (50+ pages)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fileId\": \"LARGE_DOCUMENT_FILE_ID\",\n  \"filename\": \"buyuk-katalog-50-sayfa.pdf\",\n  \"metadata\": {\n    \"source\": \"performance-test\",\n    \"size\": \"large\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://n8n.botfusions.com/webhook/embedding-upload",
+          "protocol": "https",
+          "host": ["n8n", "botfusions", "com"],
+          "path": ["webhook", "embedding-upload"]
+        },
+        "description": "Büyük dosya performans testi\n\nNOT: Bu test 3-5 dakika sürebilir. Postman timeout süresini artırın."
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Pre-request script",
+          "console.log('Sending request to N8N webhook...');"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Test script",
+          "pm.test('Status code is 200', function () {",
+          "    pm.response.to.have.status(200);",
+          "});",
+          "",
+          "pm.test('Response has success field', function () {",
+          "    var jsonData = pm.response.json();",
+          "    pm.expect(jsonData).to.have.property('success');",
+          "});",
+          "",
+          "pm.test('Response time is less than 120s', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(120000);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "n8n_webhook_url",
+      "value": "https://n8n.botfusions.com/webhook/embedding-upload",
+      "type": "string"
+    },
+    {
+      "key": "test_file_id",
+      "value": "GOOGLE_DRIVE_FILE_ID_BURAYA",
+      "type": "string"
+    }
+  ]
+}

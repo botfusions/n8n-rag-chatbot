@@ -459,6 +459,8 @@ export interface AppConfig {
   n8n: {
     webhookBaseUrl: string;
     apiKey: string;
+    chatWebhookUrl?: string;
+    embeddingWebhookUrl?: string;
   };
   security: {
     bcryptRounds: number;

@@ -132,7 +132,45 @@
         "url": "https://api.openai.com/v1/embeddings",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,\n        "headerParameters": {\n          "parameters": [\n            {\n              "name": "Content-Type",\n              "value": "application/json"\n            },\n            {\n              "name": "Authorization",\n              "value": "Bearer {{ $env.OPENAI_API_KEY }}"\n            }\n          ]\n        },\n        "sendBody": true,\n        "bodyParameters": {\n          "parameters": [\n            {\n              "name": "model",\n              "value": "text-embedding-ada-002"\n            },\n            {\n              "name": "input",\n              "value": "={{ $json.embeddingRequests.map(req => req.text) }}"\n            }\n          ]\n        },\n        "options": {\n          "timeout": 180000\n        }\n      },\n      "id": "generate-embeddings",\n      "name": "Generate Batch Embeddings",\n      "type": "n8n-nodes-base.httpRequest",\n      "typeVersion": 4.2,\n      "position": [1780, 300]\n    },\n    {\n      "parameters": {\n        "jsCode": "// Process embedding results with enhanced metadata\\nconst embeddingResponse = $json;\\nconst preparationData = $('Prepare Enhanced Embeddings').item(0).json;\\n\\n// Validate embedding response\\nif (!embeddingResponse.data || !Array.isArray(embeddingResponse.data)) {\\n  throw new Error('Invalid embedding response from OpenAI');\\n}\\n\\nif (embeddingResponse.data.length !== preparationData.embeddingRequests.length) {\\n  throw new Error(`Embedding count mismatch: expected ${preparationData.embeddingRequests.length}, got ${embeddingResponse.data.length}`);\\n}\\n\\n// Combine embeddings with chunk data and enhanced metadata\\nconst processedChunks = preparationData.embeddingRequests.map((request, index) => {\\n  const embedding = embeddingResponse.data[index];\\n  \\n  if (!embedding || !embedding.embedding) {\\n    throw new Error(`Missing embedding for chunk ${request.chunkIndex}`);\\n  }\\n  \\n  return {\\n    // Chunk data\\n    chunkIndex: request.chunkIndex,\\n    content: request.originalText,\\n    embedding: embedding.embedding,\\n    \\n    // Enhanced metadata\\n    metadata: {\\n      ...request.metadata,\\n      embeddingModel: 'text-embedding-ada-002',\\n      embeddingDimensions: embedding.embedding.length,\\n      processingTimestamp: new Date().toISOString(),\\n      batchIndex: preparationData.batchIndex,\\n      contextualText: request.text\\n    }\\n  };\\n});\\n\\n// Calculate batch statistics\\nconst batchStats = {\\n  processedChunks: processedChunks.length,\\n  totalTokensUsed: embeddingResponse.usage?.total_tokens || 0,\\n  averageQualityScore: preparationData.batchQualityScore,\\n  embeddingDimensions: processedChunks[0]?.embedding?.length || 1536\\n};\\n\\nreturn [{\\n  json: {\\n    documentId: preparationData.documentId,\\n    customerId: preparationData.customerId,\\n    widgetId: preparationData.widgetId,\\n    batchIndex: preparationData.batchIndex,\\n    totalBatches: preparationData.totalBatches,\\n    processedChunks: processedChunks,\\n    batchStats: batchStats,\\n    processingStatus: 'embeddings_generated'\\n  }\\n}];"
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "text-embedding-ada-002"
+            },
+            {
+              "name": "input",
+              "value": "={{ $json.embeddingRequests.map(req => req.text) }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "generate-embeddings",
+      "name": "Generate Batch Embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process embedding results with enhanced metadata\nconst embeddingResponse = $json;\nconst preparationData = $('Prepare Enhanced Embeddings').item(0).json;\n\n// Validate embedding response\nif (!embeddingResponse.data || !Array.isArray(embeddingResponse.data)) {\n  throw new Error('Invalid embedding response from OpenAI');\n}\n\nif (embeddingResponse.data.length !== preparationData.embeddingRequests.length) {\n  throw new Error(`Embedding count mismatch: expected ${preparationData.embeddingRequests.length}, got ${embeddingResponse.data.length}`);\n}\n\n// Combine embeddings with chunk data and enhanced metadata\nconst processedChunks = preparationData.embeddingRequests.map((request, index) => {\n  const embedding = embeddingResponse.data[index];\n  \n  if (!embedding || !embedding.embedding) {\n    throw new Error(`Missing embedding for chunk ${request.chunkIndex}`);\n  }\n  \n  return {\n    // Chunk data\n    chunkIndex: request.chunkIndex,\n    content: request.originalText,\n    embedding: embedding.embedding,\n    \n    // Enhanced metadata\n    metadata: {\n      ...request.metadata,\n      embeddingModel: 'text-embedding-ada-002',\n      embeddingDimensions: embedding.embedding.length,\n      processingTimestamp: new Date().toISOString(),\n      batchIndex: preparationData.batchIndex,\n      contextualText: request.text\n    }\n  };\n});\n\n// Calculate batch statistics\nconst batchStats = {\n  processedChunks: processedChunks.length,\n  totalTokensUsed: embeddingResponse.usage?.total_tokens || 0,\n  averageQualityScore: preparationData.batchQualityScore,\n  embeddingDimensions: processedChunks[0]?.embedding?.length || 1536\n};\n\nreturn [{\n  json: {\n    documentId: preparationData.documentId,\n    customerId: preparationData.customerId,\n    widgetId: preparationData.widgetId,\n    batchIndex: preparationData.batchIndex,\n    totalBatches: preparationData.totalBatches,\n    processedChunks: processedChunks,\n    batchStats: batchStats,\n    processingStatus: 'embeddings_generated'\n  }\n}];"
       },
       "id": "process-embeddings",
       "name": "Process Embedding Results",

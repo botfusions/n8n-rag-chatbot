@@ -274,7 +274,8 @@
           ]
         },
         "options": {
-          "timeout": 5000,\n          "ignore_ssl_issues": false
+          "timeout": 5000,
+          "ignore_ssl_issues": false
         }
       },
       "id": "track-analytics",

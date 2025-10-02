@@ -157,3 +157,43 @@ $RECYCLE.BIN/
 
 # Local settings
 settings.local.json
+
+# Test and debug scripts
+test-*.js
+debug-*.js
+check-*.js
+*-test.js
+*-debug.js
+quick-*.js
+manual-*.js
+
+# SQL scripts and backups
+*.sql
+!docs/database-schema.sql
+
+# Workflow JSON files (keep only in docs/)
+*-workflow*.json
+!docs/n8n-workflows/*.json
+
+# Temporary workflow uploads
+temp_*.json
+*-results.json
+*-status.json
+
+# Documentation snapshots (keep main docs)
+*_REHBERI.md
+*_RAPORU.md
+*_GUIDE.md
+*_REPORT.md
+*_STATUS.md
+*_ISSUE.md
+*_COMPLETE.md
+WEBHOOK_*.md
+!WEBHOOK_INTEGRATION_COMPLETE.md
+!docs/*.md
+
+# Cleanup scripts
+cleanup-*.js
+restore-*.js
+upload-*.js
+supabase-*.js

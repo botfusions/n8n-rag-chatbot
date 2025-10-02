@@ -1,0 +1,306 @@
+// Webhook-based Chat Workflow Generator
+const fs = require('fs');
+
+console.log('🔧 Webhook-based Chat Workflow Generator\n');
+
+function createWebhookBasedChatWorkflow() {
+  return {
+    "name": "Customer Embedding RAG Chat (Webhook-based)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "customer-embedding-chat",
+          "responseMode": "responseNode",
+          "options": {
+            "binaryPropertyName": "data"
+          }
+        },
+        "id": "webhook-trigger",
+        "name": "Webhook Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [240, 300],
+        "webhookId": "customer-embedding-chat"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Extract and validate chat input from webhook\nconst body = $json.body || $json;\nconst chatInput = body.chatInput || body.message;\nconst sessionId = body.sessionId || `session-${Date.now()}`;\nconst metadata = body.metadata || {};\n\n// Validate required fields\nif (!chatInput) {\n  throw new Error('chatInput is required');\n}\n\nif (!metadata.customerId) {\n  throw new Error('customerId is required in metadata');\n}\n\n// Extract customer information\nconst customerId = metadata.customerId;\nconst widgetId = metadata.widgetId || 'default';\nconst companyName = metadata.companyName || '';\n\n// Prepare for vector search\nreturn [{\n  json: {\n    chatInput,\n    sessionId,\n    customerId,\n    widgetId,\n    companyName,\n    metadata,\n    timestamp: new Date().toISOString(),\n    // Chat context for webhook response\n    isWebhookChat: true,\n    responseFormat: 'json'\n  }\n}];"
+        },
+        "id": "extract-webhook-data",
+        "name": "Extract Webhook Data",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [460, 300]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/embeddings",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "model",
+                "value": "text-embedding-ada-002"
+              },
+              {
+                "name": "input",
+                "value": "={{ $json.chatInput }}"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "id": "generate-query-embedding",
+        "name": "Generate Query Embedding",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [680, 300]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT * FROM search_customer_embeddings(\n  ARRAY{{ $json.data[0].embedding }}::vector(1536),\n  '{{ $('Extract Webhook Data').item(0).json.customerId }}',\n  0.7,\n  5\n);",
+          "additionalFields": {}
+        },
+        "id": "vector-search",
+        "name": "Vector Search Documents",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [900, 300],
+        "credentials": {
+          "postgres": {
+            "id": "supabase-connection",
+            "name": "Supabase Connection"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Build RAG context from search results\nconst searchResults = $json;\nconst chatData = $('Extract Webhook Data').item(0).json;\nconst embeddingData = $('Generate Query Embedding').item(0).json;\n\n// Process search results\nlet contextText = '';\nlet sourceCount = 0;\nlet hasRelevantContent = false;\n\nif (searchResults && Array.isArray(searchResults) && searchResults.length > 0) {\n  sourceCount = searchResults.length;\n  hasRelevantContent = true;\n  \n  // Build context from search results\n  const contexts = searchResults.map(result => {\n    const similarity = Math.round((result.similarity || 0) * 100);\n    return `[Kaynak ${similarity}% benzerlik]: ${result.content}`;\n  });\n  \n  contextText = contexts.join('\\n\\n');\n} else {\n  contextText = 'Belirli bir kaynak bulunamadı. Genel bilgilerimle yanıtlayacağım.';\n}\n\n// Prepare context for AI\nconst systemPrompt = `Sen ${chatData.companyName || 'şirketin'} müşteri hizmetleri asistanısın. Türkçe yanıt ver.\n\nMevcut bilgiler:\n${contextText}\n\nKullanıcı sorusu: ${chatData.chatInput}\n\nYanıtın:\n- Türkçe olmalı\n- Dostane ve profesyonel ton kullan\n- Mevcut bilgilere dayalı yanıt ver\n- Eğer bilgi yoksa, nazikçe belirt`;\n\nreturn [{\n  json: {\n    systemPrompt,\n    userQuery: chatData.chatInput,\n    contextText,\n    hasRelevantContent,\n    sourceCount,\n    searchResultCount: sourceCount,\n    customerId: chatData.customerId,\n    widgetId: chatData.widgetId,\n    sessionId: chatData.sessionId,\n    timestamp: chatData.timestamp,\n    tokensUsed: embeddingData.usage?.total_tokens || 0\n  }\n}];"
+        },
+        "id": "build-rag-context",
+        "name": "Build RAG Context",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [1120, 300]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "model",
+                "value": "gpt-3.5-turbo"
+              },
+              {
+                "name": "messages",
+                "value": "={{ [{ \"role\": \"system\", \"content\": $json.systemPrompt }] }}"
+              },
+              {
+                "name": "max_tokens",
+                "value": 500
+              },
+              {
+                "name": "temperature",
+                "value": 0.7
+              }
+            ]
+          },
+          "options": {
+            "timeout": 60000
+          }
+        },
+        "id": "generate-ai-response",
+        "name": "Generate AI Response",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [1340, 300]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Format final webhook response\nconst aiResponse = $json;\nconst contextData = $('Build RAG Context').item(0).json;\nconst chatData = $('Extract Webhook Data').item(0).json;\n\n// Extract AI response text\nconst responseText = aiResponse.choices?.[0]?.message?.content || 'Üzgünüm, yanıt oluşturamadım.';\n\n// Generate follow-up prompts based on context\nconst followUpPrompts = [];\nif (contextData.hasRelevantContent) {\n  followUpPrompts.push(\n    'Bu konuda daha detaylı bilgi alabilir miyim?',\n    'Başka hangi konularda yardımcı olabilirsiniz?',\n    'Bu bilgiyle ilgili örnek verebilir misiniz?'\n  );\n} else {\n  followUpPrompts.push(\n    'Başka bir konuda yardım edebilir misiniz?',\n    'Size hangi konularda soru sorabilirim?',\n    'Daha spesifik bir soru sorabilir miyim?'\n  );\n}\n\n// Prepare webhook response (ChatTrigger format compatible)\nconst webhookResponse = {\n  output: responseText,\n  followUpPrompts: followUpPrompts,\n  metadata: {\n    sessionId: chatData.sessionId,\n    customerId: chatData.customerId,\n    widgetId: chatData.widgetId,\n    hasRelevantContent: contextData.hasRelevantContent,\n    sourceCount: contextData.sourceCount,\n    responseTime: Date.now() - new Date(chatData.timestamp).getTime(),\n    tokensUsed: (contextData.tokensUsed || 0) + (aiResponse.usage?.total_tokens || 0),\n    timestamp: new Date().toISOString(),\n    // Webhook specific\n    responseType: 'webhook-chat',\n    success: true\n  }\n};\n\nreturn [{ json: webhookResponse }];"
+        },
+        "id": "format-webhook-response",
+        "name": "Format Webhook Response",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [1560, 300]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}"
+        },
+        "id": "webhook-response",
+        "name": "Webhook Response",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [1780, 300]
+      }
+    ],
+    "connections": {
+      "Webhook Trigger": {
+        "main": [[{"node": "Extract Webhook Data", "type": "main", "index": 0}]]
+      },
+      "Extract Webhook Data": {
+        "main": [[{"node": "Generate Query Embedding", "type": "main", "index": 0}]]
+      },
+      "Generate Query Embedding": {
+        "main": [[{"node": "Vector Search Documents", "type": "main", "index": 0}]]
+      },
+      "Vector Search Documents": {
+        "main": [[{"node": "Build RAG Context", "type": "main", "index": 0}]]
+      },
+      "Build RAG Context": {
+        "main": [[{"node": "Generate AI Response", "type": "main", "index": 0}]]
+      },
+      "Generate AI Response": {
+        "main": [[{"node": "Format Webhook Response", "type": "main", "index": 0}]]
+      },
+      "Format Webhook Response": {
+        "main": [[{"node": "Webhook Response", "type": "main", "index": 0}]]
+      }
+    },
+    "pinData": {},
+    "settings": {
+      "executionOrder": "v1",
+      "saveManualExecutions": true
+    },
+    "staticData": {},
+    "tags": [],
+    "triggerCount": 1,
+    "updatedAt": new Date().toISOString(),
+    "versionId": "1.0"
+  };
+}
+
+function createSimpleWebhookChatWorkflow() {
+  return {
+    "name": "Simple Webhook Chat (No RAG)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "simple-chat",
+          "responseMode": "responseNode"
+        },
+        "id": "simple-webhook-trigger",
+        "name": "Simple Webhook Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [240, 300],
+        "webhookId": "simple-chat"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Simple chat processing\nconst body = $json.body || $json;\nconst chatInput = body.chatInput || body.message;\nconst metadata = body.metadata || {};\n\nif (!chatInput) {\n  return [{ json: { error: 'chatInput is required' } }];\n}\n\n// Simple response without RAG\nconst responses = [\n  'Merhaba! Size nasıl yardımcı olabilirim?',\n  'Sorunuzu anlıyorum. Detaylı bilgi için uzmanlarımızla iletişime geçebilirsiniz.',\n  'Bu konuda size yardımcı olmaya çalışacağım.',\n  'Başka bir sorunuz var mı?'\n];\n\nconst randomResponse = responses[Math.floor(Math.random() * responses.length)];\n\nreturn [{\n  json: {\n    output: randomResponse,\n    followUpPrompts: [\n      'Daha fazla bilgi istiyorum',\n      'Başka sorularım var',\n      'İletişim bilgilerini istiyorum'\n    ],\n    metadata: {\n      responseType: 'simple-webhook',\n      timestamp: new Date().toISOString(),\n      success: true\n    }\n  }\n}];"
+        },
+        "id": "simple-chat-processing",
+        "name": "Simple Chat Processing",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [460, 300]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}"
+        },
+        "id": "simple-webhook-response",
+        "name": "Simple Webhook Response",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [680, 300]
+      }
+    ],
+    "connections": {
+      "Simple Webhook Trigger": {
+        "main": [[{"node": "Simple Chat Processing", "type": "main", "index": 0}]]
+      },
+      "Simple Chat Processing": {
+        "main": [[{"node": "Simple Webhook Response", "type": "main", "index": 0}]]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1",
+      "saveManualExecutions": true
+    },
+    "staticData": {},
+    "tags": [],
+    "triggerCount": 1,
+    "updatedAt": new Date().toISOString(),
+    "versionId": "1.0"
+  };
+}
+
+async function main() {
+  console.log('🚀 Webhook-based Chat Workflow\'ları oluşturuluyor...\n');
+
+  // RAG-enabled webhook chat workflow
+  const ragChatWorkflow = createWebhookBasedChatWorkflow();
+  fs.writeFileSync('./webhook-customer-embedding-chat.json', JSON.stringify(ragChatWorkflow, null, 2));
+  console.log('✅ RAG Chat Workflow: webhook-customer-embedding-chat.json');
+
+  // Simple webhook chat workflow
+  const simpleChatWorkflow = createSimpleWebhookChatWorkflow();
+  fs.writeFileSync('./webhook-simple-chat.json', JSON.stringify(simpleChatWorkflow, null, 2));
+  console.log('✅ Simple Chat Workflow: webhook-simple-chat.json');
+
+  console.log('\n📋 Oluşturulan Workflow\'lar:');
+  console.log('1. webhook-customer-embedding-chat.json - RAG enabled chat');
+  console.log('2. webhook-simple-chat.json - Simple response chat');
+
+  console.log('\n🔧 Sonraki Adımlar:');
+  console.log('1. Bu workflow\'ları N8N\'e import et');
+  console.log('2. Webhook URL\'lerini al');
+  console.log('3. Frontend\'te ChatTrigger yerine webhook kullan');
+  console.log('4. Test et');
+
+  console.log('\n💡 Import Komutu:');
+  console.log('node upload-webhook-workflows.js');
+}
+
+main()
+  .then(() => {
+    console.log('\n🎉 Webhook-based chat workflow\'ları hazır!');
+  })
+  .catch((error) => {
+    console.error('\n💥 Hata:', error);
+  });

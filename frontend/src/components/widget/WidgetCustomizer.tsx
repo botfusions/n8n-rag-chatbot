@@ -39,7 +39,7 @@ const defaultConfig: WidgetConfig = {
   borderRadius: '8px',
   position: 'bottom-right',
   size: 'medium',
-  welcomeMessage: 'TalksFusion\'a hoş geldiniz! Size nasıl yardımcı olabilirim?',
+  welcomeMessage: 'TalksFusion&apos;a hoş geldiniz! Size nasıl yardımcı olabilirim?',
   placeholder: 'Mesajınızı yazın...',
   companyName: 'TalksFusion',
   logoUrl: '',
@@ -125,7 +125,7 @@ export default function WidgetCustomizer() {
                 Widget Özelleştirme
               </CardTitle>
               <CardDescription>
-                Chat widget'ınızı markanıza uygun olarak özelleştirin
+                Chat widget&apos;ınızı markanıza uygun olarak özelleştirin
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -202,7 +202,7 @@ export default function WidgetCustomizer() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Pozisyon</Label>
-                      <Select value={config.position} onValueChange={(value) => updateConfig('position', value)}>
+                      <Select value={config.position} onValueChange={(value: string) => updateConfig('position', value)}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -216,7 +216,7 @@ export default function WidgetCustomizer() {
                     </div>
                     <div className="space-y-2">
                       <Label>Boyut</Label>
-                      <Select value={config.size} onValueChange={(value) => updateConfig('size', value)}>
+                      <Select value={config.size} onValueChange={(value: string) => updateConfig('size', value)}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -236,7 +236,7 @@ export default function WidgetCustomizer() {
                     <Textarea
                       id="welcomeMessage"
                       value={config.welcomeMessage}
-                      onChange={(e) => updateConfig('welcomeMessage', e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateConfig('welcomeMessage', e.target.value)}
                       placeholder="Hoş geldiniz! Size nasıl yardımcı olabilirim?"
                       rows={3}
                     />
@@ -358,7 +358,7 @@ export default function WidgetCustomizer() {
                 Canlı Önizleme
               </CardTitle>
               <CardDescription>
-                Widget'ınızın nasıl görüneceğini görün
+                Widget&apos;ınızın nasıl görüneceğini görün
               </CardDescription>
             </CardHeader>
             <CardContent>

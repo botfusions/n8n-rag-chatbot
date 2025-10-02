@@ -53,21 +53,36 @@ class ChatService {
         throw new ValidationError('Widget not found');
       }
 
-      // Perform vector search on widget documents
-      const searchResults = await vectorService.searchDocuments({
-        query: message,
-        widget_id: widgetId,
-        limit: 5,
-        similarity_threshold: 0.7,
-      });
+      // Use N8N webhook if configured, otherwise use local RAG
+      let response: string;
+      let metadata: Record<string, unknown>;
+      let searchResults: SearchResult[] = [];
 
-      // Generate response
-      const { response, metadata } = await this.generateResponse(
-        message,
-        searchResults,
-        widget,
-        conversation
-      );
+      if (appConfig.n8n.chatWebhookUrl) {
+        // Use N8N RAG Chat workflow
+        const n8nResult = await this.processWithN8N(message, sessionId, widgetId, visitorInfo);
+        response = n8nResult.response;
+        metadata = n8nResult.metadata;
+        searchResults = n8nResult.sources || [];
+      } else {
+        // Fallback to local RAG
+        searchResults = await vectorService.searchDocuments({
+          query: message,
+          widget_id: widgetId,
+          limit: 5,
+          similarity_threshold: 0.7,
+        });
+
+        const generatedResponse = await this.generateResponse(
+          message,
+          searchResults,
+          widget,
+          conversation
+        );
+
+        response = generatedResponse.response;
+        metadata = generatedResponse.metadata;
+      }
 
       // Save bot response
       await this.saveMessage(conversation.id, MessageSender.BOT, response, MessageType.TEXT, {
@@ -75,7 +90,7 @@ class ChatService {
         ...metadata,
       });
 
-      // Send to N8N webhook if configured
+      // Send to additional N8N webhook if configured (for analytics, etc.)
       if (widget.n8n_webhook_url) {
         try {
           await this.sendToN8N(widget, conversation, message, searchResults, visitorInfo);
@@ -102,6 +117,76 @@ class ChatService {
       }
 
       throw new Error('Failed to process message');
+    }
+  }
+
+  private async processWithN8N(
+    message: string,
+    sessionId: string,
+    widgetId?: string,
+    visitorInfo?: any
+  ): Promise<{
+    response: string;
+    sources?: SearchResult[];
+    metadata: Record<string, unknown>;
+  }> {
+    try {
+      const startTime = Date.now();
+
+      const payload = {
+        chatInput: message,
+        sessionId,
+        customerId: widgetId,
+        metadata: {
+          visitorInfo,
+          timestamp: new Date().toISOString(),
+        },
+      };
+
+      const response = await axios.post(appConfig.n8n.chatWebhookUrl!, payload, {
+        timeout: 30000, // 30 second timeout for N8N
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // SSL sertifika doğrulamasını atla (self-signed cert için)
+        httpsAgent: new (require('https').Agent)({
+          rejectUnauthorized: false,
+        }),
+      });
+
+      const processingTime = Date.now() - startTime;
+
+      logger.info('N8N RAG Chat response received', {
+        sessionId,
+        processingTime,
+        hasResponse: !!response.data,
+      });
+
+      // N8N'den gelen response'u parse et
+      const n8nResponse = response.data;
+
+      return {
+        response: n8nResponse?.output || n8nResponse?.response || n8nResponse?.message ||
+                  'Merhaba! Size nasıl yardımcı olabilirim?',
+        sources: n8nResponse?.sources || [],
+        metadata: {
+          processing_time: processingTime,
+          n8n_workflow: true,
+          n8n_session_id: sessionId,
+          ...n8nResponse?.metadata,
+        },
+      };
+    } catch (error) {
+      logger.error('Error processing with N8N:', error);
+
+      // Fallback response
+      return {
+        response: 'Üzgünüm, şu anda yanıt veremiyorum. Lütfen daha sonra tekrar deneyin.',
+        metadata: {
+          error: 'n8n_processing_failed',
+          fallback: true,
+        },
+      };
     }
   }
 
