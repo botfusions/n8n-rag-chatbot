@@ -4,7 +4,7 @@ const path = require('path');
 
 console.log('📤 Temizlenmiş N8N Workflow Yükleme Scripti\n');
 
-const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjNjA4MTQxNy1hOTgxLTRkZjktOTIzNS1hNDg3ODk1NGExMWIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU5MTUwMjcyfQ.j-bTvZaUp76xlfBr54H7vGH5TAQSk2MxNtq9EeLPgek';
+const API_KEY = process.env.N8N_API_KEY;
 const N8N_API_URL = 'https://n8n.botfusions.com';
 
 // Öncelikli workflow'lar

@@ -15,7 +15,7 @@ Aşağıdaki JSON konfigürasyonunu Claude Desktop ayarlarınıza ekleyin:
         "LOG_LEVEL": "error",
         "DISABLE_CONSOLE_OUTPUT": "true",
         "N8N_API_URL": "https://n8n.botfusions.com",
-        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjNjA4MTQxNy1hOTgxLTRkZjktOTIzNS1hNDg3ODk1NGExMWIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU4OTc3MDM5fQ.m2WX1U6OEpmc6V6roMya-9x8YODSV0eql8xBrEA-rkI"
+        "N8N_API_KEY": "YOUR_N8N_API_TOKEN"
       }
     }
   }

@@ -25,7 +25,7 @@ https://n8n.botfusions.com
 ### 2. API Health Check
 ```bash
 # API sağlık kontrolü
-curl -k -H "X-N8N-API-KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjNjA4MTQxNy1hOTgxLTRkZjktOTIzNS1hNDg3ODk1NGExMWIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU4OTc3MDM5fQ.m2WX1U6OEpmc6V6roMya-9x8YODSV0eql8xBrEA-rkI" \
+curl -k -H "X-N8N-API-KEY: YOUR_N8N_API_TOKEN" \
 https://n8n.botfusions.com/api/v1/workflows
 
 # ✅ Çalışıyor: Workflow listesi dönüyor

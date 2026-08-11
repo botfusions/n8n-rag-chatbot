@@ -62,8 +62,8 @@ Import sonrası bu variables'ların set edildiğini kontrol edin:
 # N8N Settings > Environment
 OPENAI_API_KEY=sk-your-openai-api-key
 SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_KEY=YOUR_N8N_API_TOKEN
+SUPABASE_ANON_KEY=YOUR_N8N_API_TOKEN
 ```
 
 ## 🧪 Import Sonrası Test
@@ -71,7 +71,7 @@ SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ### Test 1: API Health Check
 ```bash
 # Instance aktif olduktan sonra
-curl -k -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjNjA4MTQxNy1hOTgxLTRkZjktOTIzNS1hNDg3ODk1NGExMWIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzUyNTMzNjkzfQ.ZarmgKhplB6QpgFQI5pFc02-d5EGDjVdNIX5sPNvj3Y" \
+curl -k -H "Authorization: Bearer YOUR_N8N_API_TOKEN" \
 https://www.n8n.botfusions.com/api/v1/workflows
 ```
 

@@ -181,7 +181,7 @@ ngrok http 5678
 # n8n-health-check.sh
 
 URL="https://www.n8n.botfusions.com"
-TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjNjA4MTQxNy1hOTgxLTRkZjktOTIzNS1hNDg3ODk1NGExMWIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU4OTc3MDM5fQ.m2WX1U6OEpmc6V6roMya-9x8YODSV0eql8xBrEA-rkI"
+TOKEN="YOUR_N8N_API_TOKEN"
 
 echo "🔍 N8N Health Check Starting..."
 
