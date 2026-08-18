@@ -84,10 +84,10 @@ services:
 consumers:
   - username: anon
     keyauth_credentials:
-      - key: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc1NjY1MTM4MCwiZXhwIjo0OTEyMzI0OTgwLCJyb2xlIjoiYW5vbiJ9.tDEh7l2zecY6zLl19zVT3U_e7seWAiuBMcdnCcq2Jxo
+      - key: YOUR_SUPABASE_SERVICE_ROLE_KEY
   - username: service_role
     keyauth_credentials:
-      - key: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc1NjY1MTM4MCwiZXhwIjo0OTEyMzI0OTgwLCJyb2xlIjoic2VydmljZV9yb2xlIn0.cZoxspdisEpO8BQh-EGiMtOGTqhjnLGzP92Y7IPuCrw
+      - key: YOUR_SUPABASE_SERVICE_ROLE_KEY
 
 acls:
   - consumer: anon

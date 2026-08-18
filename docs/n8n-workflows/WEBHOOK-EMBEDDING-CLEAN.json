@@ -119,11 +119,11 @@
             },
             {
               "name": "apikey",
-              "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc1OTA3MDIyMCwiZXhwIjo0OTE0NzQzODIwLCJyb2xlIjoiYW5vbiJ9.GhyoDRoTItfuiUtOWQD82zjras_rWUzChVK9bFJ1FMA"
+              "value": "{{$env.SUPABASE_SERVICE_ROLE_KEY}}"
             },
             {
               "name": "Authorization",
-              "value": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc1OTA3MDIyMCwiZXhwIjo0OTE0NzQzODIwLCJyb2xlIjoic2VydmljZV9yb2xlIn0.t3BEs734PAKmxVp0qAPr-xNUgJLS44RKIO7DTSGWpGc"
+              "value": "Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}"
             },
             {
               "name": "Prefer",

@@ -117,7 +117,7 @@ curl http://localhost:8000/
 #### .env.local dosyası (Next.js)
 ```env
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:8000
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc1NjY1MTM4MCwiZXhwIjo0OTEyMzI0OTgwLCJyb2xlIjoiYW5vbiJ9.tDEh7l2zecY6zLl19zVT3U_e7seWAiuBMcdnCcq2Jxo
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_JWT
 ```
 
 ### 7. Test Etme
@@ -132,11 +132,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzd
 #### API Test
 ```bash
 # Anon key ile test
-curl -H "apikey: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc1NjY1MTM4MCwiZXhwIjo0OTEyMzI0OTgwLCJyb2xlIjoiYW5vbiJ9.tDEh7l2zecY6zLl19zVT3U_e7seWAiuBMcdnCcq2Jxo" \
+curl -H "apikey: YOUR_SUPABASE_JWT" \
      http://localhost:8000/rest/v1/customers
 
 # Service role ile test
-curl -H "apikey: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc1NjY1MTM4MCwiZXhwIjo0OTEyMzI0OTgwLCJyb2xlIjoic2VydmljZV9yb2xlIn0.cZoxspdisEpO8BQh-EGiMtOGTqhjnLGzP92Y7IPuCrw" \
+curl -H "apikey: YOUR_SUPABASE_JWT" \
      http://localhost:8000/rest/v1/customer_embeding
 ```
 
